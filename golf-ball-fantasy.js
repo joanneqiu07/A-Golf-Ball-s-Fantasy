@@ -16,6 +16,9 @@ export class GolfBallFantasy extends Scene {
             sphere: new defs.Subdivision_Sphere(4),
             circle: new defs.Regular_2D_Polygon(1, 15),
             cube: new defs.Cube,
+            pole_base: new defs.Capped_Cylinder(10,100,[[0, 1], [0,1]]),
+            flag: new defs.Rounded_Closed_Cone(20,100,[[0, 1], [0,1]]),
+
         };
 
         // *** Materials
@@ -27,6 +30,10 @@ export class GolfBallFantasy extends Scene {
             ring: new Material(new Ring_Shader()),
             golf_ball: new Material(new defs.Phong_Shader(),
                 {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#ffffff")}),
+            pole: new Material(new defs.Phong_Shader(),
+                {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
+            flag: new Material(new defs.Phong_Shader(),
+                {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
         }
 
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
@@ -54,12 +61,37 @@ export class GolfBallFantasy extends Scene {
         this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
     }
 
+
     draw_golf_ball(context, program_state) {
         // Our lil Golf Ball
         let golf_color = hex_color("#ffffff");
         let golf_ball_transform = Mat4.identity();
         golf_ball_transform = golf_ball_transform.times(Mat4.translation(-20, 0, 0));
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+    }
+
+    draw_flag(context,program_state){
+        //Red flag
+        let flag_color = hex_color("#FF0000");
+        let flag_transform = Mat4.identity();
+        flag_transform=flag_transform.times(Mat4.translation(9.5,20.25,0)).times(Mat4.scale(5,3.75,.35)).times(Mat4.rotation(3*Math.PI/2,0,1,0));
+        this.shapes.flag.draw(context,program_state,flag_transform,this.materials.flag.override({color: flag_color}));
+
+    }
+
+    draw_pole(context,program_state){
+        //Sir Polio
+        let pole_color = hex_color("#f4f0db");
+        let pole_transform = Mat4.identity();
+        pole_transform=pole_transform.times(Mat4.translation(15,12,0)).times(Mat4.scale(.5,27,.5)).times(Mat4.rotation(Math.PI/2,1,0,0));
+        this.shapes.pole_base.draw(context,program_state,pole_transform,this.materials.pole.override({color: pole_color}));
+        let flag_top_transform = Mat4.identity();
+        flag_top_transform = flag_top_transform.times(Mat4.translation(15, 25, 0)).times(Mat4.scale(.8,.8,.8));
+        this.shapes.sphere.draw(context, program_state, flag_top_transform, this.materials.pole.override({color: pole_color}));
+        let pole_base_color = hex_color("#003200");
+        let pole_base_transform = Mat4.identity();
+        pole_base_transform=pole_base_transform.times(Mat4.translation(15,-1,0)).times(Mat4.scale(1,.5,1)).times(Mat4.rotation(Math.PI/2,1,0,0));
+        this.shapes.pole_base.draw(context,program_state,pole_base_transform,this.materials.pole.override({color: pole_base_color}));
     }
 
     display(context, program_state) {
@@ -89,8 +121,12 @@ export class GolfBallFantasy extends Scene {
         // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
 
         // Draw the ground of scene 1
+
         this.draw_ground(context, program_state);
         this.draw_golf_ball(context, program_state);
+        this.draw_pole(context,program_state);
+        this.draw_flag(context,program_state);
+
     }
 }
 
