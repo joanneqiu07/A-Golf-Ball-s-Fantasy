@@ -52,6 +52,13 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Attach to moon", ["Control", "m"], () => this.attached = () => this.moon);
     }
 
+    get_distance(transform1, transform2) {
+        let x_distance = transform2.x - transform1.x;
+        let y_distance = transform2.y - transform1.y;
+        let z_distance = transform2.z - transform1.z;
+        return Math.sqrt(Math.pow(x_distance, 2) + Math.pow(y_distance, 2) + Math.pow(z_distance, 2));
+    }
+
     draw_ground(context, program_state) {
         // The ground for scene 1
         let ground_color = hex_color("#9ef581");
@@ -59,6 +66,7 @@ export class GolfBallFantasy extends Scene {
         this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: ground_color}));
         let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
         this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
+        return ground1_transform;
     }
 
 
@@ -68,6 +76,7 @@ export class GolfBallFantasy extends Scene {
         let golf_ball_transform = Mat4.identity();
         golf_ball_transform = golf_ball_transform.times(Mat4.translation(-20, 0, 0));
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+        return golf_ball_transform;
     }
 
     draw_flag(context,program_state){
@@ -122,8 +131,9 @@ export class GolfBallFantasy extends Scene {
 
         // Draw the ground of scene 1
 
-        this.draw_ground(context, program_state);
-        this.draw_golf_ball(context, program_state);
+        const ground1_transform = this.draw_ground(context, program_state);
+        const golf_ball_transform = this.draw_golf_ball(context, program_state);
+        console.log(ground1_transform);
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
 
