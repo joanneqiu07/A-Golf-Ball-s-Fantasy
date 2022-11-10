@@ -18,6 +18,9 @@ export class GolfBallFantasy extends Scene {
             circle: new defs.Regular_2D_Polygon(1, 15),
             cube: new defs.Cube,
             text: new Text_Line(35),
+            pole_base: new defs.Capped_Cylinder(10,100,[[0, 1], [0,1]]),
+            flag: new defs.Rounded_Closed_Cone(20,100,[[0, 1], [0,1]]),
+
         };
 
         // *** Materials
@@ -28,7 +31,13 @@ export class GolfBallFantasy extends Scene {
                 {ambient: .4, diffusivity: .6, color: hex_color("#992828")}),
             ring: new Material(new Ring_Shader()),
             test3: new Material(new defs.Phong_Shader(),
-                {ambient: 1}),
+                {ambient: 1, color: hex_color("#99c0df")}),
+            golf_ball: new Material(new defs.Phong_Shader(),
+                {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#ffffff")}),
+            pole: new Material(new defs.Phong_Shader(),
+                {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
+            flag: new Material(new defs.Phong_Shader(),
+                {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
         }
 
         // From examples/text-demo.js
@@ -73,13 +82,75 @@ export class GolfBallFantasy extends Scene {
         return proj_transform;
     }
 
-    draw_gound(context, program_state) {
+    draw_ground(context, program_state) {
         // The ground for scene 1
         let ground_color = hex_color("#9ef581");
         let ground1_transform = Mat4.translation(-10, -2, 0).times(Mat4.scale(20, 1, 1));
         this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: ground_color}));
         let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
         this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
+    }
+
+
+    draw_golf_ball(context, program_state) {
+        // Our lil Golf Ball
+        let golf_color = hex_color("#ffffff");
+        let golf_ball_transform = Mat4.identity();
+        golf_ball_transform = golf_ball_transform.times(Mat4.translation(-20, 0, 0));
+        this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+    }
+
+    draw_flag(context,program_state){
+        //Red flag
+        let flag_color = hex_color("#FF0000");
+        let flag_transform = Mat4.identity();
+        flag_transform=flag_transform.times(Mat4.translation(9.5,20.25,0)).times(Mat4.scale(5,3.75,.35)).times(Mat4.rotation(3*Math.PI/2,0,1,0));
+        this.shapes.flag.draw(context,program_state,flag_transform,this.materials.flag.override({color: flag_color}));
+
+    }
+
+    draw_pole(context,program_state){
+        //Sir Polio
+        let pole_color = hex_color("#f4f0db");
+        let pole_transform = Mat4.identity();
+        pole_transform=pole_transform.times(Mat4.translation(15,12,0)).times(Mat4.scale(.5,27,.5)).times(Mat4.rotation(Math.PI/2,1,0,0));
+        this.shapes.pole_base.draw(context,program_state,pole_transform,this.materials.pole.override({color: pole_color}));
+        let flag_top_transform = Mat4.identity();
+        flag_top_transform = flag_top_transform.times(Mat4.translation(15, 25, 0)).times(Mat4.scale(.8,.8,.8));
+        this.shapes.sphere.draw(context, program_state, flag_top_transform, this.materials.pole.override({color: pole_color}));
+        let pole_base_color = hex_color("#003200");
+        let pole_base_transform = Mat4.identity();
+        pole_base_transform=pole_base_transform.times(Mat4.translation(15,-1,0)).times(Mat4.scale(1,.5,1)).times(Mat4.rotation(Math.PI/2,1,0,0));
+        this.shapes.pole_base.draw(context,program_state,pole_base_transform,this.materials.pole.override({color: pole_base_color}));
+    }
+
+
+    draw_game_over(context, program_state, tank_center_loc = [-50, -30, 0]) {
+        // The game over scene
+        let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(30,10,1));
+        let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+1);
+        this.shapes.text.set_string("GAME OVER", context.context);
+        // Modeling a falling golf ball
+        let golf_ball_transform = Mat4.translation(tank_center_loc[0]-5, tank_center_loc[1]+20, tank_center_loc[2]);
+        golf_ball_transform = this.projectile_transform(5, this.launch_time, program_state.animation_time / 1000, golf_ball_transform);
+
+        let cube2_transform = Mat4.translation(-50,-30,0);
+        let cube3_transform = Mat4.translation(-55, -20, 0);
+        // let cube4_initial_pos = vec4(-45, -10.5, 0.5);
+
+        let water_lv = tank_transform.times(vec4(0,1,0,1))[1];
+        let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1];
+        let is_show_text = (golf_ball_center_y <= water_lv) ? true : false;
+        // console.log(golf_ball_center_y, water_lv, is_show_text);
+        if (is_show_text)
+            this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
+
+        this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
+        this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
+
+        this.shapes.cube.draw(context, program_state, tank_transform, this.materials.test3);
+        this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+
     }
 
     display(context, program_state) {
@@ -89,7 +160,7 @@ export class GolfBallFantasy extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
-            program_state.set_camera(Mat4.translation(0, -10, -30));
+            program_state.set_camera(Mat4.translation(0, -10, -40));
             // program_state.set_camera(Mat4.identity());
         }
 
@@ -111,7 +182,11 @@ export class GolfBallFantasy extends Scene {
         // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
 
         // Draw the ground of scene 1
-        this.draw_gound(context, program_state);
+
+        this.draw_ground(context, program_state);
+        this.draw_golf_ball(context, program_state);
+        this.draw_pole(context,program_state);
+        this.draw_flag(context,program_state);
 
 
         // Projectile motion
@@ -119,49 +194,15 @@ export class GolfBallFantasy extends Scene {
         let speed = 5.0; // unit/sec
         let proj_transform = this.projectile_transform(speed, this.launch_time, t, cube_transform);
         // ↓↓↓ Comment this out to get rid of the falling cube ↓↓↓
-        this.shapes.cube.draw(context, program_state, proj_transform, this.materials.test);
+        // this.shapes.cube.draw(context, program_state, proj_transform, this.materials.test);
         let obj_pos = proj_transform.times(vec4(0,0,0,1));
-        if (obj_pos[1] < -2) {    // If y-coor of the object is less than -5, then relaunch the object in the initial position
+        if (obj_pos[1] < -2) {    // If y-coor of the object is less than -2, then relaunch the object in the initial position
             this.launch_time = t;
         }
 
 
-        // Water?
-        let water_color = hex_color("#99c0df");
-        // water_color = color(water_color[0]*0.5, water_color[1]*0.5, water_color[2]*0.5, 1);
-        let cube2_transform = Mat4.translation(-50,-30,0);
-
-        let cube3_transform = Mat4.translation(-55, -20, 0);
-        let cube4_initial_pos = vec4(-45, -10.5, 0.5);
-        let cube4_transform = Mat4.translation(-45, -5.5, -.1);
-        cube4_transform = this.projectile_transform(0, this.launch_time, t, cube4_transform);
-
-        // let white_cube_in_water_color = hex_color("#c2d7ea");
-        let immerse_length = 0;
-        let tank_transform = Mat4.translation(-50,-30, 0).times(Mat4.scale(30,10,1));
-        let water_lv = tank_transform.times(vec4(0,1,0,1))[1];  // The y-coor of the water level
-        let water_bottom = tank_transform.times(vec4(0,-1,0,1))[1];
-        let obj_bottom = cube4_transform.times(vec4(0,-1,0,1))[1],
-            obj_top = cube4_transform.times(vec4(0,1,0,1))[1];
-        immerse_length = Math.min(water_lv - obj_bottom, 1);
-        // console.log(immerse_length, water_lv - obj_bottom);
-        let epsilon = 0.0001;
-        if (Math.abs(water_lv - obj_bottom) < epsilon) {
-            let splash_transform = Mat4.scale(.5,.2,.2);
-
-        }
-
-        // Game Over
-        let gg_transform = Mat4.translation(-50, -25, 1);
-        this.shapes.text.set_string("GAME OVER", context.context);
-        if (immerse_length > 0)
-            this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
-
-        this.shapes.cube.draw(context, program_state, cube4_transform, this.materials.test3.override({color: hex_color("#ffffff")}));
-        this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test3.override({color: hex_color("#ffffff")}));
-        this.shapes.cube.draw(context, program_state, tank_transform, this.materials.test3.override({color: water_color}));
-        this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
-
+        // Temporarily draw the game over scene
+        this.draw_game_over(context, program_state);
     }
 }
 
