@@ -1,7 +1,8 @@
 import {defs, tiny} from './examples/common.js';
+import {Text_Line} from "./examples/text-demo.js";
 
 const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
+    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture,
 } = tiny;
 
 export class GolfBallFantasy extends Scene {
@@ -16,6 +17,7 @@ export class GolfBallFantasy extends Scene {
             sphere: new defs.Subdivision_Sphere(4),
             circle: new defs.Regular_2D_Polygon(1, 15),
             cube: new defs.Cube,
+            text: new Text_Line(35),
         };
 
         // *** Materials
@@ -25,9 +27,21 @@ export class GolfBallFantasy extends Scene {
             test2: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#992828")}),
             ring: new Material(new Ring_Shader()),
+            test3: new Material(new defs.Phong_Shader(),
+                {ambient: 1}),
         }
 
+        // From examples/text-demo.js
+        const texture = new defs.Textured_Phong(1);
+        // To show text you need a Material like this one:
+        this.text_image = new Material(texture, {
+            ambient: 1, diffusivity: 0, specularity: 0,
+            texture: new Texture("assets/text.png")
+        });
+
+        this.launch_time = 0;
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
+
     }
 
     make_control_panel() {
@@ -41,6 +55,22 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Attach to planet 4", ["Control", "4"], () => this.attached = () => this.planet_4);
         this.new_line();
         this.key_triggered_button("Attach to moon", ["Control", "m"], () => this.attached = () => this.moon);
+    }
+
+    /*  @para: v: float  (hopefully) the initial horizontal speed of the object
+               t0: float    initial time
+               t: float  (hopefully) program_state.animation_time / 1000
+               initial_transform: Mat4     The transformation matrix of the initial position of the object
+        @return: proj_transform: Mat4      The transformation matrix in the projectile motion
+   */
+    projectile_transform(v, t0, t, initial_transform) {
+        let delta_t = t - t0;
+        let x_displacement = v * delta_t;
+        let y_displacement = -0.5*9.8*delta_t*delta_t;
+        // console.log(x_displacement, y_displacement);
+        let proj_transform = Mat4.translation(x_displacement, y_displacement, 0).times(initial_transform);
+        // console.log(cube_pos[1]);
+        return proj_transform;
     }
 
     draw_gound(context, program_state) {
@@ -70,7 +100,9 @@ export class GolfBallFantasy extends Scene {
 
         const light_position = vec4(0, 5, 5, 1);
         // The parameters of the Light are: position, color, size
-        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
+        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000),
+                                // new Light(vec4(0, -5, 15, 1), color(1,1,1,1), 1000)
+                                ];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         const yellow = hex_color("#fac91a");
@@ -81,8 +113,65 @@ export class GolfBallFantasy extends Scene {
         // Draw the ground of scene 1
         this.draw_gound(context, program_state);
 
+
+        // Projectile motion
+        let cube_transform = Mat4.translation(-5,20,0);
+        let speed = 5.0; // unit/sec
+        let proj_transform = this.projectile_transform(speed, this.launch_time, t, cube_transform);
+        // ↓↓↓ Comment this out to get rid of the falling cube ↓↓↓
+        this.shapes.cube.draw(context, program_state, proj_transform, this.materials.test);
+        let obj_pos = proj_transform.times(vec4(0,0,0,1));
+        if (obj_pos[1] < -2) {    // If y-coor of the object is less than -5, then relaunch the object in the initial position
+            this.launch_time = t;
+        }
+
+
+        // Water?
+        let water_color = hex_color("#99c0df");
+        // water_color = color(water_color[0]*0.5, water_color[1]*0.5, water_color[2]*0.5, 1);
+        let cube2_transform = Mat4.translation(-50,-30,0);
+
+        let cube3_transform = Mat4.translation(-55, -20, 0);
+        let cube4_initial_pos = vec4(-45, -10.5, 0.5);
+        let cube4_transform = Mat4.translation(-45, -5.5, -.1);
+        cube4_transform = this.projectile_transform(0, this.launch_time, t, cube4_transform);
+
+        // let white_cube_in_water_color = hex_color("#c2d7ea");
+        let immerse_length = 0;
+        let tank_transform = Mat4.translation(-50,-30, 0).times(Mat4.scale(30,10,1));
+        let water_lv = tank_transform.times(vec4(0,1,0,1))[1];  // The y-coor of the water level
+        let water_bottom = tank_transform.times(vec4(0,-1,0,1))[1];
+        let obj_bottom = cube4_transform.times(vec4(0,-1,0,1))[1],
+            obj_top = cube4_transform.times(vec4(0,1,0,1))[1];
+        immerse_length = Math.min(water_lv - obj_bottom, 1);
+        // console.log(immerse_length, water_lv - obj_bottom);
+        let epsilon = 0.0001;
+        if (Math.abs(water_lv - obj_bottom) < epsilon) {
+            let splash_transform = Mat4.scale(.5,.2,.2);
+
+        }
+
+        // Game Over
+        let gg_transform = Mat4.translation(-50, -25, 1);
+        this.shapes.text.set_string("GAME OVER", context.context);
+        if (immerse_length > 0)
+            this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
+
+        this.shapes.cube.draw(context, program_state, cube4_transform, this.materials.test3.override({color: hex_color("#ffffff")}));
+        this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test3.override({color: hex_color("#ffffff")}));
+        this.shapes.cube.draw(context, program_state, tank_transform, this.materials.test3.override({color: water_color}));
+        this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
+
     }
 }
+
+/*
+    Check if a point is inside the sphere
+ */
+function inSphere(p, center, radius) {
+    return (p[0] - center[0])**2 + (p[1] - center[1])**2 + (p[2] - center[2])**2 <= radius**2;
+}
+
 
 class Gouraud_Shader extends Shader {
     // This is a Shader using Phong_Shader as template
