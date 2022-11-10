@@ -25,6 +25,8 @@ export class GolfBallFantasy extends Scene {
             test2: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#992828")}),
             ring: new Material(new Ring_Shader()),
+            golf_ball: new Material(new defs.Phong_Shader(),
+                {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#ffffff")}),
         }
 
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
@@ -43,13 +45,21 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Attach to moon", ["Control", "m"], () => this.attached = () => this.moon);
     }
 
-    draw_gound(context, program_state) {
+    draw_ground(context, program_state) {
         // The ground for scene 1
         let ground_color = hex_color("#9ef581");
         let ground1_transform = Mat4.translation(-10, -2, 0).times(Mat4.scale(20, 1, 1));
         this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: ground_color}));
         let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
         this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
+    }
+
+    draw_golf_ball(context, program_state) {
+        // Our lil Golf Ball
+        let golf_color = hex_color("#ffffff");
+        let golf_ball_transform = Mat4.identity();
+        golf_ball_transform = golf_ball_transform.times(Mat4.translation(-20, 0, 0));
+        this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
     }
 
     display(context, program_state) {
@@ -59,7 +69,7 @@ export class GolfBallFantasy extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
-            program_state.set_camera(Mat4.translation(0, -10, -30));
+            program_state.set_camera(Mat4.translation(0, -10, -40));
             // program_state.set_camera(Mat4.identity());
         }
 
@@ -79,8 +89,8 @@ export class GolfBallFantasy extends Scene {
         // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
 
         // Draw the ground of scene 1
-        this.draw_gound(context, program_state);
-
+        this.draw_ground(context, program_state);
+        this.draw_golf_ball(context, program_state);
     }
 }
 
