@@ -35,7 +35,9 @@ export class GolfBallFantasy extends Scene {
             flag: new Material(new defs.Phong_Shader(),
                 {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
         }
-
+        this.golf_ball_position = Mat4.identity();
+        this.golf_ball_position = this.golf_ball_position.times(Mat4.translation(-20, 0, 0));
+        this.initial_fall = 0;
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
     }
 
@@ -52,11 +54,23 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Attach to moon", ["Control", "m"], () => this.attached = () => this.moon);
     }
 
-    get_distance(transform1, transform2) {
-        let x_distance = transform2.x - transform1.x;
-        let y_distance = transform2.y - transform1.y;
-        let z_distance = transform2.z - transform1.z;
-        return Math.sqrt(Math.pow(x_distance, 2) + Math.pow(y_distance, 2) + Math.pow(z_distance, 2));
+    x_distance(transform1, transform2) {
+        //let x_distance = transform2.x - transform1.x;
+        let x_distance = transform2.times(vec4(0,0,0,1))[0] - transform1.times(vec4(1,0,0,1))[0];
+        //let z_distance = transform2.z - transform1.z;
+        return x_distance;
+    }
+
+    y_distance(transform1, transform2) {
+        //let x_distance = transform2.x - transform1.x;
+        let y_distance = transform2.times(vec4(0,-1,0,1))[1] - transform1.times(vec4(0,1,0,1))[1];
+        //let z_distance = transform2.z - transform1.z;
+        return y_distance;
+    }
+
+    stay_on_ground(transform){
+        transform[1] = transform.times(vec4(0,-1,0,1))[1];
+        return transform;
     }
 
     draw_ground(context, program_state) {
@@ -70,11 +84,22 @@ export class GolfBallFantasy extends Scene {
     }
 
 
-    draw_golf_ball(context, program_state) {
+    draw_golf_ball(context, program_state, t, platform_transform) {
         // Our lil Golf Ball
+
         let golf_color = hex_color("#ffffff");
         let golf_ball_transform = Mat4.identity();
-        golf_ball_transform = golf_ball_transform.times(Mat4.translation(-20, 0, 0));
+        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*2, 0, 0));
+        if(this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
+            let delta_t = t-this.initial_fall;
+            let gravity = -0.5*9.8*delta_t*delta_t;
+            golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*2, gravity, 0));
+        }
+        else{
+            this.initial_fall = t;
+        }
+
+        console.log(this.y_distance(platform_transform, golf_ball_transform));
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
         return golf_ball_transform;
     }
@@ -127,13 +152,15 @@ export class GolfBallFantasy extends Scene {
         const yellow = hex_color("#fac91a");
         let model_transform = Mat4.identity();
 
+        let gravity = -0.5*9.8*t*t;
+
         // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
 
         // Draw the ground of scene 1
 
         const ground1_transform = this.draw_ground(context, program_state);
-        const golf_ball_transform = this.draw_golf_ball(context, program_state);
-        console.log(ground1_transform);
+        this.draw_golf_ball(context, program_state, t, ground1_transform);
+
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
 
