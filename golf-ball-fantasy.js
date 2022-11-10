@@ -43,6 +43,15 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Attach to moon", ["Control", "m"], () => this.attached = () => this.moon);
     }
 
+    draw_gound(context, program_state) {
+        // The ground for scene 1
+        let ground_color = hex_color("#9ef581");
+        let ground1_transform = Mat4.translation(-10, -2, 0).times(Mat4.scale(20, 1, 1));
+        this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: ground_color}));
+        let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
+        this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
+    }
+
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
@@ -67,14 +76,10 @@ export class GolfBallFantasy extends Scene {
         const yellow = hex_color("#fac91a");
         let model_transform = Mat4.identity();
 
-        this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
+        // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
 
-        // The ground for scene 1
-        // let ground_color = hex_color("#9ef581");
-        // let ground1_transform = Mat4.translation(-10, -2, 0).times(Mat4.scale(20, 1, 1));
-        // this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: ground_color}));
-        // let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
-        // this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
+        // Draw the ground of scene 1
+        this.draw_gound(context, program_state);
 
     }
 }
