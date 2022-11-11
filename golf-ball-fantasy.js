@@ -227,6 +227,7 @@ export class GolfBallFantasy extends Scene {
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000),
                                 // new Light(vec4(0, -5, 15, 1), color(1,1,1,1), 1000)
                                 ];
+        this.program_state = program_state;
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         const yellow = hex_color("#fac91a");
