@@ -38,6 +38,14 @@ export class GolfBallFantasy extends Scene {
                 {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             flag: new Material(new defs.Phong_Shader(),
                 {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
+            golf_head: new Material(new Texture_Rotate(),
+                {
+                    color: color(0, 0, 0, 1),
+                    ambient: 1, diffusivity: .1, specularity: .0,
+                    texture: new Texture("assets/stars.png", "NEAREST") // Texture class
+                }),
+            golf_stick: new Material(new defs.Textured_Phong(),
+                {ambient:1 , color: hex_color("808080")}),
         }
 
         // From examples/text-demo.js
@@ -58,15 +66,8 @@ export class GolfBallFantasy extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("View solar system", ["Control", "0"], () => this.attached = () => null);
-        this.new_line();
-        this.key_triggered_button("Attach to planet 1", ["Control", "1"], () => this.attached = () => this.planet_1);
-        this.key_triggered_button("Attach to planet 2", ["Control", "2"], () => this.attached = () => this.planet_2);
-        this.new_line();
-        this.key_triggered_button("Attach to planet 3", ["Control", "3"], () => this.attached = () => this.planet_3);
-        this.key_triggered_button("Attach to planet 4", ["Control", "4"], () => this.attached = () => this.planet_4);
-        this.new_line();
-        this.key_triggered_button("Attach to moon", ["Control", "m"], () => this.attached = () => this.moon);
+        this.key_triggered_button("Set golf club", ["v"], () => this.program_state.animate ^= 1);
+        this.key_triggered_button("Release golf club", ['b'], () => this.release ^= 1);
     }
 
     /*  @para: v: float  (hopefully) the initial horizontal speed of the object
@@ -137,6 +138,20 @@ export class GolfBallFantasy extends Scene {
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
         return golf_ball_transform;
     }
+    
+    draw_golf_clubs(context, program_state, angle) {
+        let golf_club_transform = Mat4.identity();
+        let stick = golf_club_transform.times(Mat4.translation(-21.2, 10, -1))
+            .times(Mat4.translation(.2, 10, 0))
+            .times(Mat4.rotation(angle, 0, 0, 1))
+            .times(Mat4.translation(-.2, -10, 0))
+            .times(Mat4.scale(.2, 10, .2));
+        this.shapes.cube.draw(context, program_state, stick, this.materials.golf_stick);
+        let head = stick.times(Mat4.translation(0, -1, 4))
+            .times(Mat4.scale(1.2, .1, 5.5));
+        this.shapes.sphere.draw(context, program_state, head, this.materials.golf_head);
+
+     }
 
     draw_flag(context,program_state){
         //Red flag
@@ -218,14 +233,21 @@ export class GolfBallFantasy extends Scene {
         let model_transform = Mat4.identity();
 
         let gravity = -0.5*9.8*t*t;
+        
+        const max_angle = .5 * Math.PI;
+        let a = max_angle/30;
+        let b = max_angle - a;
+        let w = 0.6 * Math.PI;
+        let angle = a + b * Math.sin(w * t);
 
         // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
 
         // Draw the ground of scene 1
 
         const ground1_transform = this.draw_ground(context, program_state);
-        this.draw_golf_ball(context, program_state);
-        //this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+        //this.draw_golf_ball(context, program_state);
+        this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+        this.draw_golf_clubs(context, program_state, 0);
 
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
@@ -399,6 +421,56 @@ class Gouraud_Shader extends Shader {
 
         this.send_material(context, gpu_addresses, material);
         this.send_gpu_state(context, gpu_addresses, gpu_state, model_transform);
+    }
+}
+
+class Texture_Rotate extends defs.Textured_Phong {
+    fragment_glsl_code() {
+        return this.shared_glsl_code() + `
+            varying vec2 f_tex_coord;
+            uniform sampler2D texture;
+            uniform float animation_time;
+            void main(){
+                // Sample the texture image in the correct place:
+                
+                // cube 1: 15rpm
+                // 15 * 2pi / 60 = 1/2 * pi rad/s = 1/2 * 3.1415926
+                
+                // rotation speed is .5
+                // mod 4. to complete one cycle
+                float angle = .5 * 3.1415926 * mod(animation_time, 4.);
+                mat4 rot_mat = mat4(
+                    vec4(cos(angle), -sin(angle), 0., 0.),
+                    vec4(sin(angle), cos(angle), 0., 0.),
+                    vec4(0., 0., 1., 0.),
+                    vec4(0., 0., 0., 1.)
+                );
+                
+                // rotate
+                // pad zero
+                vec4 f_tex_vec4 = vec4(f_tex_coord, 0., 0.);
+                f_tex_vec4 += vec4(-.5, -.5, 0., 0.);
+                f_tex_vec4 = rot_mat * f_tex_vec4;
+                f_tex_vec4 += vec4(.5, .5, 0., 0.);
+                
+                vec2 f_tex_coord = vec2(f_tex_vec4.x, f_tex_vec4.y);
+                vec4 tex_color = texture2D( texture, f_tex_coord );
+                
+                
+                float bx = mod(f_tex_coord.x, 1.);
+                float by = mod(f_tex_coord.y, 1.);
+                if ((bx >= 0.15 && bx <= 0.85 && by >= 0.15 && by <= 0.25)
+                    || (bx >= 0.15 && bx <= 0.85 && by >= 0.75 && by <= 0.85)
+                    || (bx >= 0.15 && bx <= 0.25 && by >= 0.15 && by <= 0.85)
+                    || (bx >= 0.75 && bx <= 0.85 && by >= 0.15 && by <= 0.85)
+                ) tex_color = vec4(0., 0., 0., 1.);
+                 
+                if ( tex_color.w < .01 ) discard;
+                                                                         // Compute an initial (ambient) color:
+                gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w ); 
+                                                                         // Compute the final color with contributions from lights:
+                gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+        } `;
     }
 }
 
