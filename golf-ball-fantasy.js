@@ -114,10 +114,13 @@ export class GolfBallFantasy extends Scene {
         return ground1_transform;
     }
 
+    draw_golf_ball(context, program_state){
+        // Our lil stationary Golf Ball
+        this.shapes.sphere.draw(context, program_state, this.golf_ball_position, this.materials.golf_ball);
+    }
 
-    draw_golf_ball(context, program_state, t, platform_transform) {
-        // Our lil Golf Ball
-
+    draw_golf_ball_moving(context, program_state, t, platform_transform) {
+        // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
         let golf_ball_transform = Mat4.identity();
         golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*2, 0, 0));
@@ -221,7 +224,8 @@ export class GolfBallFantasy extends Scene {
         // Draw the ground of scene 1
 
         const ground1_transform = this.draw_ground(context, program_state);
-        this.draw_golf_ball(context, program_state, t, ground1_transform);
+        this.draw_golf_ball(context, program_state);
+        //this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
 
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
