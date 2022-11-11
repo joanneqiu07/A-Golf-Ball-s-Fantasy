@@ -247,8 +247,14 @@ export class GolfBallFantasy extends Scene {
 
         const ground1_transform = this.draw_ground(context, program_state);
         //this.draw_golf_ball(context, program_state);
-        this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
-        this.draw_golf_clubs(context, program_state, angle);
+        if (t < 2.5) {
+            this.draw_golf_ball(context, program_state);
+            this.draw_golf_clubs(context, program_state, angle);
+        }
+        else {
+            this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+            this.draw_golf_clubs(context, program_state, 0);
+        }
 
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
