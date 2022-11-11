@@ -66,7 +66,7 @@ export class GolfBallFantasy extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Set golf club", ["v"], () => this.program_state.animate ^= 1);
+        this.key_triggered_button("Pause golf club", ["v"], () => this.program_state.animate ^= 1);
         this.key_triggered_button("Release golf club", ['b'], () => this.release ^= 1);
     }
 
@@ -143,7 +143,7 @@ export class GolfBallFantasy extends Scene {
         let golf_club_transform = Mat4.identity();
         let stick = golf_club_transform.times(Mat4.translation(-21.2, 10, -1))
             .times(Mat4.translation(.2, 10, 0))
-            .times(Mat4.rotation(angle, 0, 0, 1))
+            .times(Mat4.rotation(- angle, 0, 0, 1))
             .times(Mat4.translation(-.2, -10, 0))
             .times(Mat4.scale(.2, 10, .2));
         this.shapes.cube.draw(context, program_state, stick, this.materials.golf_stick);
@@ -235,8 +235,8 @@ export class GolfBallFantasy extends Scene {
         let gravity = -0.5*9.8*t*t;
         
         const max_angle = .5 * Math.PI;
-        let a = max_angle/30;
-        let b = max_angle - a;
+        let a = max_angle/2;
+        let b = a;
         let w = 0.6 * Math.PI;
         let angle = a + b * Math.sin(w * t);
 
@@ -247,7 +247,7 @@ export class GolfBallFantasy extends Scene {
         const ground1_transform = this.draw_ground(context, program_state);
         //this.draw_golf_ball(context, program_state);
         this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
-        this.draw_golf_clubs(context, program_state, 0);
+        this.draw_golf_clubs(context, program_state, angle);
 
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
