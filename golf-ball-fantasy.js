@@ -130,7 +130,11 @@ export class GolfBallFantasy extends Scene {
 
     // Determine if a point (x, y) is in the line segment between (x1, y1) and (x2, y2)
     onLine(x, y, x1, y1, x2, y2) {
-        return (y-y1)*(x2-x1) === (y2-y1)*(x-x1);
+        const error = 0.7;
+        const slope_diff = (y-y1)*(x2-x1) - (y2-y1)*(x-x1);
+        const isOnLine = (slope_diff <= 0) && (Math.abs(slope_diff) <= error);
+        // console.log(x, y, x1, y1, x2, y2, isOnLine);
+        return isOnLine;
     }
 
     /*
@@ -260,7 +264,14 @@ export class GolfBallFantasy extends Scene {
     hit_plane1() {
         const v0 = Math.abs(this.golf_ball_velocity.y);
         this.golf_ball_velocity = {x: -1*v0/(2*Math.sqrt(2.)), y: 1*v0/(2*Math.sqrt(2.))};
-        console.log(this.golf_ball_velocity);
+        // console.log(this.golf_ball_velocity);
+    }
+
+    // Just change velocity to (-3.834, 3.834)
+    hit_plane() {
+        const v0 = Math.sqrt(2*9.8*6);
+        const v1 = v0/(2*Math.sqrt(2.));
+        this.golf_ball_velocity = {x: -1*v1, y: v1};
     }
 
     draw_scene2(context, program_state, dt) {
@@ -269,18 +280,41 @@ export class GolfBallFantasy extends Scene {
         // console.log(plane1_x, plane1_y);
         let plane1_transform = Mat4.translation(plane1_x, plane1_y, 0).times(Mat4.rotation(Math.PI/4, 0,0,1)).times(Mat4.scale(2,.1,1));
         this.shapes.cube.draw(context, program_state, plane1_transform, this.materials.test);
+        // Draw the other planes
+        const plane_centers = [[6.7251, -13, 0], [1.4502, -17, 0], [-3.8248, -21, 0], [-9.1000, -25, 0], [-14.3746, -29, 0]];
+        const plane_transforms = [plane1_transform];
+        plane_centers.map(center => {
+            // console.log(center);
+            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
+            let plane_transform = Mat4.translation(...center).times(Mat4.scale(2,.1,1));
+            plane_transforms.push(plane_transform);
+            this.shapes.cube.draw(context, program_state, plane_transform, this.materials.test);
+        })
+        // const golf_ball_pos = this.golf_ball2_transform.times(vec4(0,0,0,1));
+        // const golf_ball_y = golf_ball_pos[1];
+        // if (this.hit_plane_count === 0 && golf_ball_y <= -8) { // Time to hit plane 1
+        //     this.hit_plane1();
+        //     this.hit_plane_count += 1;
+        //     console.log(golf_ball_pos);
+        // }
 
-        const golf_ball_pos = this.golf_ball2_transform.times(vec4(0,0,0,1));
-        const golf_ball_y = golf_ball_pos[1];
-        if (this.hit_plane_count === 0 && golf_ball_y <= -8) { // Time to hit plane 1
-            this.hit_plane1();
-            this.hit_plane_count += 1;
-            console.log(golf_ball_pos);
+        if (this.hit_plane_count < 6)
+        {
+            // Determine if the ball hits the plane
+            let isOnPlane = this.onPlane(this.golf_ball2_transform, 1, plane_transforms[this.hit_plane_count]);
+            if (isOnPlane) {
+                // console.log("on plane", this.hit_plane_count + 1);
+                this.hit_plane_count += 1;
+                this.hit_plane();
+            }
         }
+
         const {dx, dy} = this.delta_displacement(dt);
         this.golf_ball2_transform = Mat4.translation(dx, dy, 0).times(this.golf_ball2_transform);
 
         this.shapes.sphere.draw(context, program_state, this.golf_ball2_transform, this.materials.golf_ball);
+
+
     }
 
     display(context, program_state) {
