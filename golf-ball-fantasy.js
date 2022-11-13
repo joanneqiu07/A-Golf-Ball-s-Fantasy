@@ -48,6 +48,8 @@ export class GolfBallFantasy extends Scene {
                 {ambient:1 , color: hex_color("808080")}),
         }
 
+        this.ground_color = hex_color("#9ef581");
+
         // From examples/text-demo.js
         const texture = new defs.Textured_Phong(1);
         // To show text you need a Material like this one:
@@ -74,6 +76,7 @@ export class GolfBallFantasy extends Scene {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Pause golf club", ["v"], () => this.program_state.animate ^= 1);
         this.key_triggered_button("Release golf club", ['b'], () => this.release ^= 1);
+        this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
     }
 
     /*  @para: v: float  (hopefully) the initial horizontal speed of the object
@@ -154,13 +157,18 @@ export class GolfBallFantasy extends Scene {
                             plane_l[0], plane_l[1], plane_r[0], plane_r[1]);
     }
 
+    speedUp() {
+        // When the key g is pressed, increase the horizontal velocity by a certain amount
+        if (this.hit_plane_count === 6)
+            this.golf_ball_velocity.x -= .5;
+    }
+
     draw_ground(context, program_state) {
         // The ground for scene 1
-        let ground_color = hex_color("#9ef581");
         let ground1_transform = Mat4.translation(-10, -2, 0).times(Mat4.scale(20, 1, 1));
-        this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: ground_color}));
+        this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: this.ground_color}));
         let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
-        this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
+        this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: this.ground_color}));
         // console.log(ground1_transform.times(vec4(-1,1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
         //             ground1_transform.times(vec4(1,-1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
         //             ground2_transform.times(vec4(-1,1,1,1)), ground2_transform.times(vec4(1,1,1,1)));
@@ -230,7 +238,7 @@ export class GolfBallFantasy extends Scene {
     }
 
 
-    draw_game_over(context, program_state, tank_center_loc = [-50, -30, 0]) {
+    draw_game_over(context, program_state, tank_center_loc = [-50, -70, 0]) {
         // The game over scene
         let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(30,10,1));
         let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+1);
@@ -258,16 +266,9 @@ export class GolfBallFantasy extends Scene {
 
     }
 
-    // When hitting the first plane, the initial speed is reduced by half, and the direction changes to (-1,1),
+    // When hitting the first plane, the velocity changes to (-3.834, 3.834)
     // para: this.golf_ball_velocity
     // return: this.golf_ball_velocity
-    hit_plane1() {
-        const v0 = Math.abs(this.golf_ball_velocity.y);
-        this.golf_ball_velocity = {x: -1*v0/(2*Math.sqrt(2.)), y: 1*v0/(2*Math.sqrt(2.))};
-        // console.log(this.golf_ball_velocity);
-    }
-
-    // Just change velocity to (-3.834, 3.834)
     hit_plane() {
         const v0 = Math.sqrt(2*9.8*6);
         const v1 = v0/(2*Math.sqrt(2.));
@@ -314,6 +315,9 @@ export class GolfBallFantasy extends Scene {
 
         this.shapes.sphere.draw(context, program_state, this.golf_ball2_transform, this.materials.golf_ball);
 
+        // Draw the platform
+        const ground_transform = Mat4.translation(-32, -36, 0).times(Mat4.scale(8, 1, 1));
+        this.shapes.cube.draw(context, program_state, ground_transform, this.materials.test.override({color: this.ground_color}));
 
     }
 
