@@ -304,7 +304,7 @@ export class GolfBallFantasy extends Scene {
         if (this.hit_plane_count < 6)
         {
             // Determine if the ball hits the plane
-            let isOnPlane = this.onPlane(this.golf_ball_position, 1, plane_transforms[this.hit_plane_count]);
+            let isOnPlane = this.onPlane(this.current_golf_ball_position, 1, plane_transforms[this.hit_plane_count]);
             if (isOnPlane) {
                 // console.log("on plane", this.hit_plane_count + 1);
                 this.hit_plane_count += 1;
