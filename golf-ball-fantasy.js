@@ -163,7 +163,7 @@ export class GolfBallFantasy extends Scene {
     // May not be accurate.
     onScene2Platform(golf_ball_radius, platform_transform) {
         const error = 0.5;
-        const golf_ball_center = this.golf_ball2_transform.times(vec4(0,0,0,1));
+        const golf_ball_center = this.current_golf_ball_position.times(vec4(0,0,0,1));
         const platform_ur = platform_transform.times(vec4(1,1,0,1));
         // this.isOnPlatform =  golf_ball_center[0] <= platform_ur[0] && (golf_ball_center[1] - golf_ball_radius) <= platform_ur[1];
         if (golf_ball_center[0] <= platform_ur[0]) {
