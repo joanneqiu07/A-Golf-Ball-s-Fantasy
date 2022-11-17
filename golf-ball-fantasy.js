@@ -62,6 +62,7 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball_position = Mat4.identity();
         this.golf_ball_position = this.golf_ball_position.times(Mat4.translation(-20, 0, 0));
         this.initial_fall = 0;
+        this.current_golf_ball_position = Mat4.identity();
 
         this.golf_ball_velocity = {x: 0, y: 0};
         this.golf_ball_acceleration = {x: 0, y: -9.8};
@@ -183,12 +184,13 @@ export class GolfBallFantasy extends Scene {
     draw_golf_ball_moving(context, program_state, t, platform_transform) {
         // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
+        let golf_velocity = 3;
         let golf_ball_transform = Mat4.identity();
-        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*2, 0, 0));
+        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0));
         if(this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
-            golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*2, gravity, 0));
+            golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
         }
         else{
             this.initial_fall = t;
@@ -196,6 +198,7 @@ export class GolfBallFantasy extends Scene {
 
         // console.log(this.y_distance(platform_transform, golf_ball_transform));
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+        console.log(golf_ball_transform);
         return golf_ball_transform;
     }
     
@@ -302,7 +305,7 @@ export class GolfBallFantasy extends Scene {
         if (this.hit_plane_count < 6)
         {
             // Determine if the ball hits the plane
-            let isOnPlane = this.onPlane(this.golf_ball2_transform, 1, plane_transforms[this.hit_plane_count]);
+            let isOnPlane = this.onPlane(this.current_golf_ball_position, 1, plane_transforms[this.hit_plane_count]);
             if (isOnPlane) {
                 // console.log("on plane", this.hit_plane_count + 1);
                 this.hit_plane_count += 1;
@@ -311,9 +314,9 @@ export class GolfBallFantasy extends Scene {
         }
 
         const {dx, dy} = this.delta_displacement(dt);
-        this.golf_ball2_transform = Mat4.translation(dx, dy, 0).times(this.golf_ball2_transform);
+        this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position);
 
-        this.shapes.sphere.draw(context, program_state, this.golf_ball2_transform, this.materials.golf_ball);
+        this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
         // Draw the platform
         const ground_transform = Mat4.translation(-32, -36, 0).times(Mat4.scale(8, 1, 1));
@@ -366,8 +369,8 @@ export class GolfBallFantasy extends Scene {
             this.draw_golf_ball(context, program_state);
             this.draw_golf_clubs(context, program_state, angle);
         }
-        else {
-            this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+        else if(t < 13){
+            this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
             this.draw_golf_clubs(context, program_state, 0);
         }
 
@@ -385,8 +388,8 @@ export class GolfBallFantasy extends Scene {
         if (obj_pos[1] < -2) {    // If y-coor of the object is less than -2, then relaunch the object in the initial position
             this.launch_time = t;
         }
-
-        this.draw_scene2(context, program_state, dt);
+        if (t > 13)
+            this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
 
         // Temporarily draw the game over scene
         this.draw_game_over(context, program_state);
