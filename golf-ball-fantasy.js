@@ -116,8 +116,8 @@ export class GolfBallFantasy extends Scene {
     }
 
     // The displacement of the golf ball in time dt, update this.golf_ball_velocity
-    // para: this.golf_ball_velocity, this.golf_ball_acceleration, dt
-    // return: this.golf_ball_velocity,
+    // para: dt
+    // read this.golf_ball_velocity, this.golf_ball_acceleration; write to this.golf_ball_velocity
     delta_displacement(dt) {
         // const v_0x = this.golf_ball_velocity.x, v_0y = this.golf_ball_velocity.y;
         // const a_x = this.golf_ball_acceleration.x, a_y = this.golf_ball_acceleration.y;
@@ -158,10 +158,27 @@ export class GolfBallFantasy extends Scene {
                             plane_l[0], plane_l[1], plane_r[0], plane_r[1]);
     }
 
+    // Check if the golf ball is on the right of the scene 2 platform
+    // by checking if the ball bottom is to the lower left of the upper right corner of the platform
+    // May not be accurate.
+    onScene2Platform(golf_ball_radius, platform_transform) {
+        const error = 0.5;
+        const golf_ball_center = this.golf_ball2_transform.times(vec4(0,0,0,1));
+        const platform_ur = platform_transform.times(vec4(1,1,0,1));
+        // this.isOnPlatform =  golf_ball_center[0] <= platform_ur[0] && (golf_ball_center[1] - golf_ball_radius) <= platform_ur[1];
+        if (golf_ball_center[0] <= platform_ur[0]) {
+            const golf_ball_bottom = golf_ball_center[1] - golf_ball_radius;
+            if (platform_ur[1] - golf_ball_bottom >= 0 && platform_ur[1] - golf_ball_bottom <= error) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     speedUp() {
         // When the key g is pressed, increase the horizontal velocity by a certain amount
         if (this.hit_plane_count === 6)
-            this.golf_ball_velocity.x -= .5;
+            this.golf_ball_velocity.x -= .6;
     }
 
     draw_ground(context, program_state) {
@@ -270,8 +287,7 @@ export class GolfBallFantasy extends Scene {
     }
 
     // When hitting the first plane, the velocity changes to (-3.834, 3.834)
-    // para: this.golf_ball_velocity
-    // return: this.golf_ball_velocity
+    // read and write to this.golf_ball_velocity
     hit_plane() {
         const v0 = Math.sqrt(2*9.8*6);
         const v1 = v0/(2*Math.sqrt(2.));
@@ -322,6 +338,16 @@ export class GolfBallFantasy extends Scene {
         const ground_transform = Mat4.translation(-32, -36, 0).times(Mat4.scale(8, 1, 1));
         this.shapes.cube.draw(context, program_state, ground_transform, this.materials.test.override({color: this.ground_color}));
 
+        // Checking landing on the platform
+        if (this.hit_plane_count === 6 && this.onScene2Platform(1, ground_transform)) {
+            this.golf_ball_velocity.y = 0;
+            this.golf_ball_acceleration.y = 0;
+
+            // Drag the ball on the platform
+            const platform_top_y = ground_transform.times(vec4(0,1,0,1))[1];
+            const golf_ball_bottom_y = this.golf_ball2_transform.times(vec4(0,0,0,1))[1] - 1;
+            this.golf_ball2_transform = Mat4.translation(0, platform_top_y - golf_ball_bottom_y, 0).times(this.golf_ball2_transform);
+        }
     }
 
     display(context, program_state) {
