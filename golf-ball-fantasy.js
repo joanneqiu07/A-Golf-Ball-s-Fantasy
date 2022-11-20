@@ -48,6 +48,8 @@ export class GolfBallFantasy extends Scene {
                 {ambient:1 , color: hex_color("808080")}),
         }
 
+        this.ground_color = hex_color("#9ef581");
+
         // From examples/text-demo.js
         const texture = new defs.Textured_Phong(1);
         // To show text you need a Material like this one:
@@ -60,6 +62,13 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball_position = Mat4.identity();
         this.golf_ball_position = this.golf_ball_position.times(Mat4.translation(-20, 0, 0));
         this.initial_fall = 0;
+        this.current_golf_ball_position = Mat4.identity();
+
+        this.golf_ball_velocity = {x: 0, y: 0};
+        this.golf_ball_acceleration = {x: 0, y: -9.8};
+        this.golf_ball2_transform = Mat4.translation(12,-2,0);
+        this.hit_plane_count = 0;
+
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
 
     }
@@ -68,6 +77,7 @@ export class GolfBallFantasy extends Scene {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Pause golf club", ["v"], () => this.program_state.animate ^= 1);
         this.key_triggered_button("Release golf club", ['b'], () => this.release ^= 1);
+        this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
     }
 
     /*  @para: v: float  (hopefully) the initial horizontal speed of the object
@@ -105,13 +115,81 @@ export class GolfBallFantasy extends Scene {
         return transform;
     }
 
+    // The displacement of the golf ball in time dt, update this.golf_ball_velocity
+    // para: dt
+    // read this.golf_ball_velocity, this.golf_ball_acceleration; write to this.golf_ball_velocity
+    delta_displacement(dt) {
+        // const v_0x = this.golf_ball_velocity.x, v_0y = this.golf_ball_velocity.y;
+        // const a_x = this.golf_ball_acceleration.x, a_y = this.golf_ball_acceleration.y;
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+        const {x: v_0x, y: v_0y} = this.golf_ball_velocity;
+        const {x: a_x, y: a_y} = this.golf_ball_acceleration;
+
+        const v_tx = v_0x + a_x * dt, v_ty = v_0y + a_y * dt;
+        const dx = (v_0x + v_tx)/2 * dt, dy = (v_0y + v_ty)/2 * dt;
+        this.golf_ball_velocity = {x: v_tx, y: v_ty};
+        // console.log(this.golf_ball_velocity, dx, dy);
+        return {dx, dy};
+    }
+
+    // Determine if a point (x, y) is in the line segment between (x1, y1) and (x2, y2)
+    onLine(x, y, x1, y1, x2, y2) {
+        const error = 0.7;
+        const slope_diff = (y-y1)*(x2-x1) - (y2-y1)*(x-x1);
+        const isOnLine = (slope_diff <= 0) && (Math.abs(slope_diff) <= error);
+        // console.log(x, y, x1, y1, x2, y2, isOnLine);
+        return isOnLine;
+    }
+
+    /*
+    Determine if the golf ball is on a plane in scene 2
+    It is on the plane if (the golf ball center's y-coor - r) is on the plane
+    Like:           ____
+                   /    \
+           -------|  x  |-------------------
+                  \    /                   | r
+            ======== plane =============== -
+    */
+    onPlane(golf_ball_transform, golf_ball_radius, plane_transform) {
+        const golf_ball_center = golf_ball_transform.times(vec4(0,0,0,1));
+        const plane_l = plane_transform.times(vec4(-1,1,0,1)),
+              plane_r = plane_transform.times(vec4(1,1,0,1));
+        return this.onLine(golf_ball_center[0], golf_ball_center[1]-golf_ball_radius,
+                            plane_l[0], plane_l[1], plane_r[0], plane_r[1]);
+    }
+
+    // Check if the golf ball is on the right of the scene 2 platform
+    // by checking if the ball bottom is to the lower left of the upper right corner of the platform
+    // May not be accurate.
+    onScene2Platform(golf_ball_radius, platform_transform) {
+        const error = 0.5;
+        const golf_ball_center = this.current_golf_ball_position.times(vec4(0,0,0,1));
+        const platform_ur = platform_transform.times(vec4(1,1,0,1));
+        // this.isOnPlatform =  golf_ball_center[0] <= platform_ur[0] && (golf_ball_center[1] - golf_ball_radius) <= platform_ur[1];
+        if (golf_ball_center[0] <= platform_ur[0]) {
+            const golf_ball_bottom = golf_ball_center[1] - golf_ball_radius;
+            if (platform_ur[1] - golf_ball_bottom >= 0 && platform_ur[1] - golf_ball_bottom <= error) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    speedUp() {
+        // When the key g is pressed, increase the horizontal velocity by a certain amount
+        if (this.hit_plane_count === 6)
+            this.golf_ball_velocity.x -= .6;
+    }
+
     draw_ground(context, program_state) {
         // The ground for scene 1
-        let ground_color = hex_color("#9ef581");
         let ground1_transform = Mat4.translation(-10, -2, 0).times(Mat4.scale(20, 1, 1));
-        this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: ground_color}));
+        this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: this.ground_color}));
         let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
-        this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: ground_color}));
+        this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: this.ground_color}));
+        // console.log(ground1_transform.times(vec4(-1,1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
+        //             ground1_transform.times(vec4(1,-1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
+        //             ground2_transform.times(vec4(-1,1,1,1)), ground2_transform.times(vec4(1,1,1,1)));
         return ground1_transform;
     }
 
@@ -123,19 +201,21 @@ export class GolfBallFantasy extends Scene {
     draw_golf_ball_moving(context, program_state, t, platform_transform) {
         // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
+        let golf_velocity = 3;
         let golf_ball_transform = Mat4.identity();
-        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*2, 0, 0));
+        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0));
         if(this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
-            golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*2, gravity, 0));
+            golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
         }
         else{
             this.initial_fall = t;
         }
 
-        console.log(this.y_distance(platform_transform, golf_ball_transform));
+        // console.log(this.y_distance(platform_transform, golf_ball_transform));
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+        console.log(golf_ball_transform);
         return golf_ball_transform;
     }
     
@@ -178,7 +258,7 @@ export class GolfBallFantasy extends Scene {
     }
 
 
-    draw_game_over(context, program_state, tank_center_loc = [-50, -30, 0]) {
+    draw_game_over(context, program_state, tank_center_loc = [-50, -70, 0]) {
         // The game over scene
         let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(30,10,1));
         let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+1);
@@ -204,6 +284,70 @@ export class GolfBallFantasy extends Scene {
         this.shapes.cube.draw(context, program_state, tank_transform, this.materials.test3);
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
 
+    }
+
+    // When hitting the first plane, the velocity changes to (-3.834, 3.834)
+    // read and write to this.golf_ball_velocity
+    hit_plane() {
+        const v0 = Math.sqrt(2*9.8*6);
+        const v1 = v0/(2*Math.sqrt(2.));
+        this.golf_ball_velocity = {x: -1*v1, y: v1};
+    }
+
+    draw_scene2(context, program_state, dt) {
+        // Draw the first plane
+        let plane1_x = 12 + 1/Math.sqrt(2.), plane1_y = -8 - 1/Math.sqrt(2.);
+        // console.log(plane1_x, plane1_y);
+        let plane1_transform = Mat4.translation(plane1_x, plane1_y, 0).times(Mat4.rotation(Math.PI/4, 0,0,1)).times(Mat4.scale(2,.1,1));
+        this.shapes.cube.draw(context, program_state, plane1_transform, this.materials.test);
+        // Draw the other planes
+        const plane_centers = [[6.7251, -13, 0], [1.4502, -17, 0], [-3.8248, -21, 0], [-9.1000, -25, 0], [-14.3746, -29, 0]];
+        const plane_transforms = [plane1_transform];
+        plane_centers.map(center => {
+            // console.log(center);
+            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
+            let plane_transform = Mat4.translation(...center).times(Mat4.scale(2,.1,1));
+            plane_transforms.push(plane_transform);
+            this.shapes.cube.draw(context, program_state, plane_transform, this.materials.test);
+        })
+        // const golf_ball_pos = this.golf_ball2_transform.times(vec4(0,0,0,1));
+        // const golf_ball_y = golf_ball_pos[1];
+        // if (this.hit_plane_count === 0 && golf_ball_y <= -8) { // Time to hit plane 1
+        //     this.hit_plane1();
+        //     this.hit_plane_count += 1;
+        //     console.log(golf_ball_pos);
+        // }
+
+        if (this.hit_plane_count < 6)
+        {
+            // Determine if the ball hits the plane
+            let isOnPlane = this.onPlane(this.current_golf_ball_position, 1, plane_transforms[this.hit_plane_count]);
+            if (isOnPlane) {
+                // console.log("on plane", this.hit_plane_count + 1);
+                this.hit_plane_count += 1;
+                this.hit_plane();
+            }
+        }
+
+        const {dx, dy} = this.delta_displacement(dt);
+        this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position);
+
+        this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
+
+        // Draw the platform
+        const ground_transform = Mat4.translation(-32, -36, 0).times(Mat4.scale(8, 1, 1));
+        this.shapes.cube.draw(context, program_state, ground_transform, this.materials.test.override({color: this.ground_color}));
+
+        // Checking landing on the platform
+        if (this.hit_plane_count === 6 && this.onScene2Platform(1, ground_transform)) {
+            this.golf_ball_velocity.y = 0;
+            this.golf_ball_acceleration.y = 0;
+
+            // Drag the ball on the platform
+            const platform_top_y = ground_transform.times(vec4(0,1,0,1))[1];
+            const golf_ball_bottom_y = this.golf_ball2_transform.times(vec4(0,0,0,1))[1] - 1;
+            this.golf_ball2_transform = Mat4.translation(0, platform_top_y - golf_ball_bottom_y, 0).times(this.golf_ball2_transform);
+        }
     }
 
     display(context, program_state) {
@@ -247,8 +391,14 @@ export class GolfBallFantasy extends Scene {
 
         const ground1_transform = this.draw_ground(context, program_state);
         //this.draw_golf_ball(context, program_state);
-        this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
-        this.draw_golf_clubs(context, program_state, angle);
+        if (t < 2.5) {
+            this.draw_golf_ball(context, program_state);
+            this.draw_golf_clubs(context, program_state, angle);
+        }
+        else if(t < 13){
+            this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+            this.draw_golf_clubs(context, program_state, 0);
+        }
 
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
@@ -264,10 +414,12 @@ export class GolfBallFantasy extends Scene {
         if (obj_pos[1] < -2) {    // If y-coor of the object is less than -2, then relaunch the object in the initial position
             this.launch_time = t;
         }
-
+        if (t > 13)
+            this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
 
         // Temporarily draw the game over scene
         this.draw_game_over(context, program_state);
+
     }
 }
 
