@@ -267,16 +267,28 @@ export class GolfBallFantasy extends Scene {
         let golf_ball_transform = Mat4.translation(tank_center_loc[0]-5, tank_center_loc[1]+20, tank_center_loc[2]);
         // golf_ball_transform = this.projectile_transform(5, this.launch_time, program_state.animation_time / 1000, golf_ball_transform);
         golf_ball_transform = this.current_golf_ball_position;
-        let cube2_transform = Mat4.translation(-50,-30,0);
-        let cube3_transform = Mat4.translation(-55, -20, 0);
+        // let cube2_transform = Mat4.translation(-50,-30,0);
+        // let cube3_transform = Mat4.translation(-55, -20, 0);
         // let cube4_initial_pos = vec4(-45, -10.5, 0.5);
 
-        let water_lv = tank_transform.times(vec4(0,1,0,1))[1];
-        let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1];
+        let water_lv = tank_transform.times(vec4(0,1,0,1))[1],
+            tank_bottom = tank_transform.times(vec4(0,-1,0,1))[1];
+        let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1],
+            golf_ball_bottom_y = golf_ball_center_y - 1;
         let is_show_text = (golf_ball_center_y <= water_lv);
-        // console.log(golf_ball_center_y, water_lv, is_show_text);
-        if (is_show_text)
+        let h = water_lv - golf_ball_bottom_y;
+        if (is_show_text) {
             this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
+        }
+        // Modeling buoyancy
+        if (h >= 0 && h < 19.8) {
+            this.set_immersed_acceleration(water_lv - golf_ball_center_y);
+        }
+        else if (h >= 19.8) {
+            this.golf_ball_velocity = {x: 0, y: 0};
+            this.golf_ball_acceleration = {x: 0, y: 0};
+
+        }
 
         // this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
         // this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
@@ -350,6 +362,22 @@ export class GolfBallFantasy extends Scene {
         }
     }
 
+    set_immersed_acceleration(h) {
+       /*   buoyant force = water density * g * immersed volume
+            immersed volume of a sphere = pi(R*h^2 - h^3/3), where h is the immersed height
+        */
+        // console.log(h);
+        if (h >= 2) {h = 2;}
+
+        const g = 9.8, water_density = 2000, radius = 0.024, mass = 0.046;  // The actual water density is 997 kg/m^3 but for the let's choose a denser water
+        const h_real = radius/1 * h;
+        const immersed_volume = Math.PI*(radius*h_real*h_real - h_real**3/3);
+        const buoyancy = water_density*g*immersed_volume;
+        const acc = buoyancy / mass - g;
+        this.golf_ball_acceleration.y = acc;
+        console.log(h, acc);
+    }
+
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
@@ -359,7 +387,7 @@ export class GolfBallFantasy extends Scene {
             // program_state.set_camera(this.initial_camera_location);
             program_state.set_camera(Mat4.translation(0, -10, -40));
             // program_state.set_camera(Mat4.translation(0, 10, -100));
-            // program_state.set_camera(Mat4.translation(10, 40, -80)); // focus on the game over scene
+            // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
         }
 
         program_state.projection_transform = Mat4.perspective(
