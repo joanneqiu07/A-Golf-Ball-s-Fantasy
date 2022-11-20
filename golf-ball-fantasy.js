@@ -258,31 +258,31 @@ export class GolfBallFantasy extends Scene {
     }
 
 
-    draw_game_over(context, program_state, tank_center_loc = [-50, -70, 0]) {
+    draw_game_over(context, program_state, tank_center_loc = [-30, -70, 0]) {
         // The game over scene
         let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(30,10,1));
         let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+1);
         this.shapes.text.set_string("GAME OVER", context.context);
         // Modeling a falling golf ball
         let golf_ball_transform = Mat4.translation(tank_center_loc[0]-5, tank_center_loc[1]+20, tank_center_loc[2]);
-        golf_ball_transform = this.projectile_transform(5, this.launch_time, program_state.animation_time / 1000, golf_ball_transform);
-
+        // golf_ball_transform = this.projectile_transform(5, this.launch_time, program_state.animation_time / 1000, golf_ball_transform);
+        golf_ball_transform = this.current_golf_ball_position;
         let cube2_transform = Mat4.translation(-50,-30,0);
         let cube3_transform = Mat4.translation(-55, -20, 0);
         // let cube4_initial_pos = vec4(-45, -10.5, 0.5);
 
         let water_lv = tank_transform.times(vec4(0,1,0,1))[1];
         let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1];
-        let is_show_text = (golf_ball_center_y <= water_lv) ? true : false;
+        let is_show_text = (golf_ball_center_y <= water_lv);
         // console.log(golf_ball_center_y, water_lv, is_show_text);
         if (is_show_text)
             this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
 
-        this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
-        this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
+        // this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
+        // this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
 
         this.shapes.cube.draw(context, program_state, tank_transform, this.materials.test3);
-        this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+        // this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
 
     }
 
@@ -358,7 +358,7 @@ export class GolfBallFantasy extends Scene {
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
             program_state.set_camera(Mat4.translation(0, -10, -40));
-            // program_state.set_camera(Mat4.identity());
+            // program_state.set_camera(Mat4.translation(10, 40, -80)); // focus on the game over scene
         }
 
         program_state.projection_transform = Mat4.perspective(
