@@ -30,8 +30,8 @@ export class GolfBallFantasy extends Scene {
             test2: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#992828")}),
             ring: new Material(new Ring_Shader()),
-            test3: new Material(new defs.Phong_Shader(),
-                {ambient: 1, color: hex_color("#99c0df")}),
+            test3: new Material(new Ring_Shader(),
+                {ambient: 1, color: hex_color("#88ccff")}),
             golf_ball: new Material(new defs.Phong_Shader(),
                 {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#ffffff")}),
             pole: new Material(new defs.Phong_Shader(),
@@ -134,7 +134,7 @@ export class GolfBallFantasy extends Scene {
 
     // Determine if a point (x, y) is in the line segment between (x1, y1) and (x2, y2)
     onLine(x, y, x1, y1, x2, y2) {
-        const error = 0.7;
+        const error = 0.8;
         const slope_diff = (y-y1)*(x2-x1) - (y2-y1)*(x-x1);
         const isOnLine = (slope_diff <= 0) && (Math.abs(slope_diff) <= error);
         // console.log(x, y, x1, y1, x2, y2, isOnLine);
@@ -258,31 +258,43 @@ export class GolfBallFantasy extends Scene {
     }
 
 
-    draw_game_over(context, program_state, tank_center_loc = [-50, -70, 0]) {
+    draw_game_over(context, program_state, tank_center_loc = [-30, -70, 0]) {
         // The game over scene
         let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(30,10,1));
         let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+1);
         this.shapes.text.set_string("GAME OVER", context.context);
         // Modeling a falling golf ball
         let golf_ball_transform = Mat4.translation(tank_center_loc[0]-5, tank_center_loc[1]+20, tank_center_loc[2]);
-        golf_ball_transform = this.projectile_transform(5, this.launch_time, program_state.animation_time / 1000, golf_ball_transform);
-
-        let cube2_transform = Mat4.translation(-50,-30,0);
-        let cube3_transform = Mat4.translation(-55, -20, 0);
+        // golf_ball_transform = this.projectile_transform(5, this.launch_time, program_state.animation_time / 1000, golf_ball_transform);
+        golf_ball_transform = this.current_golf_ball_position;
+        // let cube2_transform = Mat4.translation(-50,-30,0);
+        // let cube3_transform = Mat4.translation(-55, -20, 0);
         // let cube4_initial_pos = vec4(-45, -10.5, 0.5);
 
-        let water_lv = tank_transform.times(vec4(0,1,0,1))[1];
-        let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1];
-        let is_show_text = (golf_ball_center_y <= water_lv) ? true : false;
-        // console.log(golf_ball_center_y, water_lv, is_show_text);
-        if (is_show_text)
+        let water_lv = tank_transform.times(vec4(0,1,0,1))[1],
+            tank_bottom = tank_transform.times(vec4(0,-1,0,1))[1];
+        let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1],
+            golf_ball_bottom_y = golf_ball_center_y - 1;
+        let is_show_text = (golf_ball_center_y <= water_lv);
+        let h = water_lv - golf_ball_bottom_y;
+        if (is_show_text) {
             this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
+        }
+        // Modeling buoyancy
+        if (h >= 0 && h < 19.8) {
+            this.set_immersed_acceleration(water_lv - golf_ball_center_y);
+        }
+        else if (h >= 19.8) {
+            this.golf_ball_velocity = {x: 0, y: 0};
+            this.golf_ball_acceleration = {x: 0, y: 0};
 
-        this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
-        this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
+        }
+
+        // this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
+        // this.shapes.cube.draw(context, program_state, cube3_transform, this.materials.test);
 
         this.shapes.cube.draw(context, program_state, tank_transform, this.materials.test3);
-        this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+        // this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
 
     }
 
@@ -350,6 +362,22 @@ export class GolfBallFantasy extends Scene {
         }
     }
 
+    set_immersed_acceleration(h) {
+       /*   buoyant force = water density * g * immersed volume
+            immersed volume of a sphere = pi(R*h^2 - h^3/3), where h is the immersed height
+        */
+        // console.log(h);
+        if (h >= 2) {h = 2;}
+
+        const g = 9.8, water_density = 2000, radius = 0.024, mass = 0.046;  // The actual water density is 997 kg/m^3 but for the let's choose a denser water
+        const h_real = radius/1 * h;
+        const immersed_volume = Math.PI*(radius*h_real*h_real - h_real**3/3);
+        const buoyancy = water_density*g*immersed_volume;
+        const acc = buoyancy / mass - g;
+        this.golf_ball_acceleration.y = acc;
+        console.log(h, acc);
+    }
+
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
@@ -358,7 +386,8 @@ export class GolfBallFantasy extends Scene {
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
             program_state.set_camera(Mat4.translation(0, -10, -40));
-            // program_state.set_camera(Mat4.identity());
+            // program_state.set_camera(Mat4.translation(0, 10, -100));
+            // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
         }
 
         program_state.projection_transform = Mat4.perspective(
@@ -628,6 +657,17 @@ class Texture_Rotate extends defs.Textured_Phong {
 }
 
 class Ring_Shader extends Shader {
+
+    send_material(gl, gpu, material) {  // From the codes above
+        // send_material(): Send the desired shape-wide material qualities to the
+        // graphics card, where they will tweak the Phong lighting formula.
+        gl.uniform4fv(gpu.shape_color, material.color);
+        gl.uniform1f(gpu.ambient, material.ambient);
+        gl.uniform1f(gpu.diffusivity, material.diffusivity);
+        gl.uniform1f(gpu.specularity, material.specularity);
+        gl.uniform1f(gpu.smoothness, material.smoothness);
+    }
+
     update_GPU(context, gpu_addresses, graphics_state, model_transform, material) {
         // update_GPU():  Defining how to synchronize our JavaScript's variables to the GPU's:
         const [P, C, M] = [graphics_state.projection_transform, graphics_state.camera_inverse, model_transform],
@@ -635,6 +675,8 @@ class Ring_Shader extends Shader {
         context.uniformMatrix4fv(gpu_addresses.model_transform, false, Matrix.flatten_2D_to_1D(model_transform.transposed()));
         context.uniformMatrix4fv(gpu_addresses.projection_camera_model_transform, false,
             Matrix.flatten_2D_to_1D(PCM.transposed()));
+
+        this.send_material(context, gpu_addresses, material);
     }
 
     shared_glsl_code() {
@@ -643,6 +685,7 @@ class Ring_Shader extends Shader {
         precision mediump float;
         varying vec4 point_position;
         varying vec4 center;
+        uniform vec4 shape_color; 
         `;
     }
 
@@ -655,7 +698,7 @@ class Ring_Shader extends Shader {
         uniform mat4 projection_camera_model_transform;
         
         void main(){
-          
+          gl_Position = projection_camera_model_transform * vec4( position, 1.0 );
         }`;
     }
 
@@ -664,7 +707,7 @@ class Ring_Shader extends Shader {
         // TODO:  Complete the main function of the fragment shader (Extra Credit Part II).
         return this.shared_glsl_code() + `
         void main(){
-          
+          gl_FragColor = vec4(shape_color.xyz, 0.8);
         }`;
     }
 }
