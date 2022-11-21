@@ -215,7 +215,7 @@ export class GolfBallFantasy extends Scene {
 
         // console.log(this.y_distance(platform_transform, golf_ball_transform));
         this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
-        console.log(golf_ball_transform);
+        //console.log(golf_ball_transform);
         return golf_ball_transform;
     }
     
@@ -385,7 +385,7 @@ export class GolfBallFantasy extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
-            program_state.set_camera(Mat4.translation(0, -10, -40));
+            program_state.set_camera(Mat4.translation(0, -10, -45));
             // program_state.set_camera(Mat4.translation(0, 10, -100));
             // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
         }
@@ -443,8 +443,12 @@ export class GolfBallFantasy extends Scene {
         if (obj_pos[1] < -2) {    // If y-coor of the object is less than -2, then relaunch the object in the initial position
             this.launch_time = t;
         }
-        if (t > 13)
+        if (t > 13) {
+            let y_position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1))[1];
+            let desired = Mat4.translation(0, -y_position_of_golf_ball, -45);
+            program_state.set_camera(desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.03)));
             this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
+        }
 
         // Temporarily draw the game over scene
         this.draw_game_over(context, program_state);
