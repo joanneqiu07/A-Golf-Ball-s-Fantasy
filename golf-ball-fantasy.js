@@ -5,6 +5,8 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture,
 } = tiny;
 
+const {Textured_Phong} = defs
+
 export class GolfBallFantasy extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
@@ -32,8 +34,11 @@ export class GolfBallFantasy extends Scene {
             ring: new Material(new Ring_Shader()),
             test3: new Material(new Ring_Shader(),
                 {ambient: 1, color: hex_color("#88ccff")}),
-            golf_ball: new Material(new defs.Phong_Shader(),
-                {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#ffffff")}),
+            golf_ball: new Material(new Textured_Phong(), {
+                color: hex_color("#ffffff"),
+                ambient: 0.5, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/golf_ball.jpg", "NEAREST")
+                }),
             pole: new Material(new defs.Phong_Shader(),
                 {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             flag: new Material(new defs.Phong_Shader(),
@@ -69,6 +74,7 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball2_transform = Mat4.translation(12,-2,0);
         this.hit_plane_count = 0;
 
+        this.camera_on_ball = 0;
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
 
     }
@@ -78,6 +84,7 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Pause golf club", ["v"], () => this.program_state.animate ^= 1);
         this.key_triggered_button("Release golf club", ['b'], () => this.release ^= 1);
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
+        this.key_triggered_button("Camera on Ball", ['c'], () => this.camera_on_ball = (this.camera_on_ball+1)%3);
     }
 
     /*  @para: v: float  (hopefully) the initial horizontal speed of the object
@@ -203,8 +210,8 @@ export class GolfBallFantasy extends Scene {
         let golf_color = hex_color("#ffffff");
         let golf_velocity = 3;
         let golf_ball_transform = Mat4.identity();
-        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0));
-        if(this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
+        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 0, 1, 0));
+        if (this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
             golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
@@ -342,7 +349,7 @@ export class GolfBallFantasy extends Scene {
         }
 
         const {dx, dy} = this.delta_displacement(dt);
-        this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position);
+        this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
 
         this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
@@ -408,7 +415,7 @@ export class GolfBallFantasy extends Scene {
 
         let gravity = -0.5*9.8*t*t;
         
-        const max_angle = .5 * Math.PI;
+        const max_angle = .9 * Math.PI;
         let a = max_angle/2;
         let b = a;
         let w = 0.6 * Math.PI;
@@ -419,7 +426,7 @@ export class GolfBallFantasy extends Scene {
         // Draw the ground of scene 1
 
         const ground1_transform = this.draw_ground(context, program_state);
-        //this.draw_golf_ball(context, program_state);
+
         if (t < 2.5) {
             this.draw_golf_ball(context, program_state);
             this.draw_golf_clubs(context, program_state, angle);
@@ -444,11 +451,26 @@ export class GolfBallFantasy extends Scene {
             this.launch_time = t;
         }
         if (t > 13) {
-            let y_position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1))[1];
-            let desired = Mat4.translation(0, -y_position_of_golf_ball, -45);
-            program_state.set_camera(desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.03)));
-            this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
+            if (t < 25) {
+                let y_position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1))[1];
+                let desired = Mat4.translation(0, -y_position_of_golf_ball, -45);
+                program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.03)));
+            }
+                this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
         }
+        let position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1));
+        let x = position_of_golf_ball[0];
+        let y = position_of_golf_ball[1]
+        if(this.camera_on_ball === 1){
+            let desired = Mat4.translation(-x, -y, -10);
+            program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
+        }
+        else if(this.camera_on_ball === 2){
+            let desired = Mat4.translation(-x, -y, -45);
+            program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
+        }
+
+
 
         // Temporarily draw the game over scene
         this.draw_game_over(context, program_state);
