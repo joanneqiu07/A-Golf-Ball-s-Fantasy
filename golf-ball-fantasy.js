@@ -451,12 +451,7 @@ export class GolfBallFantasy extends Scene {
             this.launch_time = t;
         }
         if (t > 13) {
-            if (t < 25) {
-                let y_position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1))[1];
-                let desired = Mat4.translation(0, -y_position_of_golf_ball, -45);
-                program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.03)));
-            }
-                this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
+            this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
         }
         let position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1));
         let x = position_of_golf_ball[0];
