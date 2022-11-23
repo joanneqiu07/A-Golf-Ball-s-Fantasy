@@ -38,12 +38,8 @@ export class GolfBallFantasy extends Scene {
                 {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             flag: new Material(new defs.Phong_Shader(),
                 {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
-            golf_head: new Material(new Texture_Rotate(),
-                {
-                    color: color(0, 0, 0, 1),
-                    ambient: 1, diffusivity: .1, specularity: .0,
-                    texture: new Texture("assets/stars.png", "NEAREST") // Texture class
-                }),
+            golf_head: new Material(new defs.Phong_Shader(),
+                {color: hex_color("9E9E9E"), ambient: 1, diffusivity: .1}),
             golf_stick: new Material(new defs.Textured_Phong(),
                 {ambient:1 , color: hex_color("808080")}),
         }
@@ -77,7 +73,11 @@ export class GolfBallFantasy extends Scene {
         this.golf_club_model = Mat4.identity();
         this.golf_club_model = this.golf_club_model.times(Mat4.translation(-21.2, 10, -1))
             .times(Mat4.scale(.2, 10, .2));
+        this.golf_head_model = Mat4.identity();
         this.club_angle = 0;
+        this.reachesMax = 0;
+        this.velocity = 0;
+        this.isHit = 0;
 
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
 
@@ -85,8 +85,8 @@ export class GolfBallFantasy extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Lift/Pause", ["p"], () => this.lift ^= 1);
-        this.key_triggered_button("Swing", ['s'], () => this.release ^= 1);
+        this.key_triggered_button("Lift/Pause", ["m"], () => this.lift ^= 1);
+        this.key_triggered_button("Swing", ['n'], () => this.release ^= 1);
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
     }
 
@@ -236,9 +236,42 @@ export class GolfBallFantasy extends Scene {
             .times(Mat4.rotation(- angle, 0, 0, 1))
             .times(Mat4.translation(-.2, -10, 0))
             .times(Mat4.scale(.2, 10, .2));
-
+        this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
+        this.golf_head_model = this.golf_club_model.times(Mat4.translation(0, -1, 4))
+            .times(Mat4.scale(2, .1, 5.5));
+        this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
     }
 
+    pendulum_update(dt, damping) {
+        let acceleration = - 9.8 * dt * dt * Math.sin(this.club_angle);
+        this.velocity += acceleration;
+        this.velocity *= damping;
+        this.club_angle += this.velocity;
+    }
+
+    swing_golf_club(dt) {
+        const max_angle = .5 * Math.PI;
+        let angle = dt * Math.PI * .2;
+        if (this.club_angle > max_angle) this.reachesMax = 1;
+        else if (this.club_angle <= 0) this.reachesMax = 0;
+
+        if (!this.release) {
+            if (this.lift) {
+                if (this.reachesMax) this.club_angle -= angle;
+                else this.club_angle += angle;
+            }
+        }
+        else {
+            if ((this.club_angle <= 0) && (!this.is_Hit)) {
+                this.is_Hit = 1;
+                this.velocity = -1 * this.velocity;
+            }
+
+            if (this.is_Hit)
+                this.pendulum_update(dt, .995);
+            else this.pendulum_update(dt, .99995);
+        }
+    }
     draw_flag(context,program_state){
         //Red flag
         let flag_color = hex_color("#FF0000");
@@ -412,42 +445,27 @@ export class GolfBallFantasy extends Scene {
         let model_transform = Mat4.identity();
 
         let gravity = -0.5*9.8*t*t;
-        
-        const max_angle = .5 * Math.PI;
-        let a = max_angle/2;
-        let b = a;
-        let w = 0.4 * Math.PI;
-        let angle = dt * Math.PI * .2;
-
-        // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
-
+  
         // Draw the ground of scene 1
 
         const ground1_transform = this.draw_ground(context, program_state);
 
-        if (!this.release) {
-            if (this.lift) {
-                this.club_angle += angle;
-                this.draw_golf_clubs(context, program_state, this.club_angle);
-            }
-        }
-        else{
-            this.club_angle -= angle;
-            this.draw_golf_clubs(context, program_state, this.club_angle);
-        }
-        this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
-        let head = this.golf_club_model.times(Mat4.translation(0, -1, 4))
-            .times(Mat4.scale(1.2, .1, 5.5));
-        this.shapes.sphere.draw(context, program_state, head, this.materials.golf_head);
+        this.swing_golf_club(dt);
+        this.draw_golf_clubs(context, program_state, this.club_angle);
 
+        if (!this.is_Hit)
+            this.draw_golf_ball(context, program_state);
+        else
+            this.current_golf_ball_position = this.draw_golf_ball_moving(context,
+                program_state, t, ground1_transform);
 
         //this.draw_golf_ball(context, program_state);
-        if (t < 2.5) {
-            this.draw_golf_ball(context, program_state);
-        }
-        else if(t < 13){
-            this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
-        }
+        // if (t < 2.5) {
+        //     this.draw_golf_ball(context, program_state);
+        // }
+        // else if(t < 13){
+        //     this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+        // }
 
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
