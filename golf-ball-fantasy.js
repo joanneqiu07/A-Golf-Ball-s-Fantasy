@@ -34,16 +34,17 @@ export class GolfBallFantasy extends Scene {
             ring: new Material(new Ring_Shader()),
             test3: new Material(new Ring_Shader(),
                 {ambient: 1, color: hex_color("#88ccff")}),
-
-            golf_ball: new Material(new defs.Phong_Shader(),
-                {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#ffffff")}),
-
+            golf_ball: new Material(new Textured_Phong(), {
+                color: hex_color("#ffffff"),
+                ambient: 0.5, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/golf_ball.jpg", "NEAREST")
+            }),
             pole: new Material(new defs.Phong_Shader(),
                 {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             flag: new Material(new defs.Phong_Shader(),
                 {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             golf_head: new Material(new defs.Phong_Shader(),
-                {color: hex_color("9E9E9E"), ambient: 1, diffusivity: .1}),
+                {ambient: 1, diffusivity: .1, color: hex_color("9E9E9E")}),
             golf_stick: new Material(new defs.Textured_Phong(),
                 {ambient:1 , color: hex_color("808080")}),
         }
@@ -69,7 +70,9 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball2_transform = Mat4.translation(12,-2,0);
         this.hit_plane_count = 0;
 
+        this.camera_on_ball = 0;
 
+        // bottons control
         this.lift = 0;
         this.release = 0;
 
@@ -83,7 +86,7 @@ export class GolfBallFantasy extends Scene {
         this.velocity = 0;
         this.isHit = 0;
 
-        this.camera_on_ball = 0;
+
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
 
     }
@@ -169,9 +172,9 @@ export class GolfBallFantasy extends Scene {
     onPlane(golf_ball_transform, golf_ball_radius, plane_transform) {
         const golf_ball_center = golf_ball_transform.times(vec4(0,0,0,1));
         const plane_l = plane_transform.times(vec4(-1,1,0,1)),
-              plane_r = plane_transform.times(vec4(1,1,0,1));
+            plane_r = plane_transform.times(vec4(1,1,0,1));
         return this.onLine(golf_ball_center[0], golf_ball_center[1]-golf_ball_radius,
-                            plane_l[0], plane_l[1], plane_r[0], plane_r[1]);
+            plane_l[0], plane_l[1], plane_r[0], plane_r[1]);
     }
 
     // Check if the golf ball is on the right of the scene 2 platform
@@ -219,7 +222,6 @@ export class GolfBallFantasy extends Scene {
         let golf_color = hex_color("#ffffff");
         let golf_velocity = 3;
         let golf_ball_transform = Mat4.identity();
-
         golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 0, 1, 0));
         if (this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
@@ -278,7 +280,9 @@ export class GolfBallFantasy extends Scene {
                 this.pendulum_update(dt, .995);
             else this.pendulum_update(dt, .99995);
         }
+        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[1] < 0) this.club_angle = 0;
     }
+
     draw_flag(context,program_state){
         //Red flag
         let flag_color = hex_color("#FF0000");
@@ -388,7 +392,6 @@ export class GolfBallFantasy extends Scene {
         }
 
         const {dx, dy} = this.delta_displacement(dt);
-
         this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
 
         this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
@@ -465,8 +468,9 @@ export class GolfBallFantasy extends Scene {
         if (!this.is_Hit)
             this.draw_golf_ball(context, program_state);
         else
-            this.current_golf_ball_position = this.draw_golf_ball_moving(context,
-                program_state, t, ground1_transform);
+            if (t < 13)
+                this.current_golf_ball_position = this.draw_golf_ball_moving(context,
+                    program_state, t, ground1_transform);
 
         //this.draw_golf_ball(context, program_state);
         // if (t < 2.5) {
