@@ -64,6 +64,7 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball_position = this.golf_ball_position.times(Mat4.translation(-20, 0, 0));
         this.initial_fall = 0;
         this.current_golf_ball_position = Mat4.identity();
+        this.hit_time = 0;
 
         this.golf_ball_velocity = {x: 0, y: 0};
         this.golf_ball_acceleration = {x: 0, y: -9.8};
@@ -217,7 +218,7 @@ export class GolfBallFantasy extends Scene {
         this.shapes.sphere.draw(context, program_state, this.golf_ball_position, this.materials.golf_ball);
     }
 
-    draw_golf_ball_moving(context, program_state, t, platform_transform) {
+    draw_golf_ball_moving(context, program_state, t, platform_transform, dt) {
         // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
         let golf_velocity = 3;
@@ -227,6 +228,7 @@ export class GolfBallFantasy extends Scene {
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
             golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
+            this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
         }
         else{
             this.initial_fall = t;
@@ -465,12 +467,16 @@ export class GolfBallFantasy extends Scene {
         this.swing_golf_club(dt);
         this.draw_golf_clubs(context, program_state, this.club_angle);
 
-        if (!this.is_Hit)
+        if (!this.is_Hit) {
             this.draw_golf_ball(context, program_state);
-        else
-            if (t < 13)
-                this.current_golf_ball_position = this.draw_golf_ball_moving(context,
-                    program_state, t, ground1_transform);
+            this.hit_time = t;
+        }
+        else {
+            this.current_golf_ball_position = this.draw_golf_ball_moving(context,
+                program_state, t-this.hit_time+2.5, ground1_transform, dt);
+
+        }
+
 
         //this.draw_golf_ball(context, program_state);
         // if (t < 2.5) {
@@ -495,9 +501,9 @@ export class GolfBallFantasy extends Scene {
         if (obj_pos[1] < -2) {    // If y-coor of the object is less than -2, then relaunch the object in the initial position
             this.launch_time = t;
         }
-        if (t > 13) {
-            this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
-        }
+        // if (t > 13) {
+        //     this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
+        // }
         let position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1));
         let x = position_of_golf_ball[0];
         let y = position_of_golf_ball[1]
