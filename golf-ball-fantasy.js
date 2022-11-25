@@ -470,7 +470,7 @@ export class GolfBallFantasy extends Scene {
         const yellow = hex_color("#fac91a");
         let model_transform = Mat4.identity();
 
-        this.shapes.cube.draw(context, program_state, Mat4.translation(13,0,0), this.materials.test);
+        // this.shapes.cube.draw(context, program_state, Mat4.translation(13,0,0), this.materials.test);
 
         let gravity = -0.5*9.8*t*t;
 
