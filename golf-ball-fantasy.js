@@ -51,6 +51,11 @@ export class GolfBallFantasy extends Scene {
                 }),
             golf_stick: new Material(new defs.Textured_Phong(),
                 {ambient:1 , color: hex_color("808080")}),
+            gg: new Material(new defs.Textured_Phong(1), {
+                color: hex_color("#000000"),
+                ambient: 1, diffusivity: 0.9, specularity: 0,
+                texture: new Texture("assets/ggCandara2.png", "NEAREST")
+            }),
         }
 
         this.ground_color = hex_color("#9ef581");
@@ -284,8 +289,12 @@ export class GolfBallFantasy extends Scene {
             golf_ball_bottom_y = golf_ball_center_y - 1;
         let is_show_text = (golf_ball_center_y <= water_lv);
         let h = water_lv - golf_ball_bottom_y;
+        is_show_text = true;
         if (is_show_text) {
-            this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
+            // this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
+            let gg_plane_transform = Mat4.scale(15,10,0.1);
+            gg_plane_transform = gg_transform.times(gg_plane_transform);
+            this.shapes.cube.draw(context, program_state, gg_plane_transform, this.materials.gg);
         }
         // Modeling buoyancy
         if (h >= 0 && h < 19.8) {
@@ -732,4 +741,3 @@ class Ring_Shader extends Shader {
         }`;
     }
 }
-
