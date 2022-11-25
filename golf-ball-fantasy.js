@@ -69,6 +69,7 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball_acceleration = {x: 0, y: 0};
         this.golf_ball2_transform = Mat4.translation(12,-2,0);
         this.hit_plane_count = 0;
+        this.is_stopped = false;
 
         this.camera_on_ball = 0;
 
@@ -338,7 +339,10 @@ export class GolfBallFantasy extends Scene {
 
         let water_lv = tank_transform.times(vec4(0,1,0,1))[1],
             tank_bottom = tank_transform.times(vec4(0,-1,0,1))[1];
-        let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1],
+        let golf_ball_center = golf_ball_transform.times(vec4(0,0,0,1)),
+            golf_ball_center_x = golf_ball_center[0],
+            golf_ball_center_y = golf_ball_center[1],
+            golf_ball_center_z = golf_ball_center[2],
             golf_ball_bottom_y = golf_ball_center_y - 1;
         let is_show_text = (golf_ball_center_y <= water_lv);
         let h = water_lv - golf_ball_bottom_y;
@@ -352,7 +356,8 @@ export class GolfBallFantasy extends Scene {
         else if (h >= 19.8) {
             this.golf_ball_velocity = {x: 0, y: 0};
             this.golf_ball_acceleration = {x: 0, y: 0};
-
+            // this.current_golf_ball_position = Mat4.translation(golf_ball_center_x, golf_ball_center_y, golf_ball_center_z);
+            this.is_stopped = true;
         }
 
         // this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
@@ -406,9 +411,10 @@ export class GolfBallFantasy extends Scene {
             }
         }
 
-        const {dx, dy} = this.delta_displacement(dt);
-        this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
-
+        if (!this.is_stopped) {
+            const {dx, dy} = this.delta_displacement(dt);
+            this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt / 5, 0, 0, 1));
+        }
         // this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
         // Draw the platform
