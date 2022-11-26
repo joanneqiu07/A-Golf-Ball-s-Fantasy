@@ -33,6 +33,8 @@ export class GolfBallFantasy extends Scene {
             ring: new Material(new Ring_Shader()),
             test3: new Material(new Ring_Shader(),
                 {ambient: 1, color: hex_color("#88ccff")}),
+            test4: new Material(new defs.Phong_Shader(),
+                {ambient: 0.8, diffusivity: .6, color: hex_color("#ffffff")}),
             golf_ball: new Material(new Textured_Phong(), {
                 color: hex_color("#ffffff"),
                 ambient: 0.5, diffusivity: 0, specularity: 0,
@@ -70,6 +72,22 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball2_transform = Mat4.translation(12,-2,0);
         this.hit_plane_count = 0;
         this.is_stopped = false;
+
+        this.domino_dimension = {x: 1, y: 6, z: 3};
+        this.dominoes = [0,1,2,3,4,5,6,7].map((n) => {
+            const center = {x: -39.5 - n*4, y: -32, z: 0};
+            return {
+                "center": center,
+                "transform": Mat4.translation(center.x, center.y, center.z).times(Mat4.scale(this.domino_dimension.x/2, this.domino_dimension.y/2, this.domino_dimension.z/2)),
+                "is_falling": false,
+                "is_collided": false,  // If the domino collided with the right one or the button
+                "angular_speed": 0.0,
+                "angular_acceleration": 0.0,
+                "rotation_angle": 0.0,
+            };
+        });
+        this.button_loc = {x: -74, y: -34, z:0};
+        console.log(this.dominoes);
 
         this.camera_on_ball = 0;
 
@@ -222,7 +240,7 @@ export class GolfBallFantasy extends Scene {
         // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
         let golf_velocity = 3;
-        if (this.hit_plane_count === 0)
+        // if (this.hit_plane_count === 0)
             this.golf_ball_velocity.x = 3;
         let golf_ball_transform = Mat4.identity();
         golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 0, 1, 0));
@@ -321,6 +339,18 @@ export class GolfBallFantasy extends Scene {
         let pole_base_transform = Mat4.identity();
         pole_base_transform=pole_base_transform.times(Mat4.translation(15,-1,0)).times(Mat4.scale(1,.5,1)).times(Mat4.rotation(Math.PI/2,1,0,0));
         this.shapes.pole_base.draw(context,program_state,pole_base_transform,this.materials.pole.override({color: pole_base_color}));
+    }
+
+    draw_dominoes(context, program_state) {
+
+        let button_transform = Mat4.translation(-74, -34, 0).times(Mat4.rotation(Math.PI/2, 1, 0, 0));
+
+        for (let idx in this.dominoes) {
+            this.shapes.cube.draw(context, program_state, this.dominoes[idx].transform, this.materials.test4.override({color: hex_color("#0099ff")}));
+            // console.log(domino)
+        }
+
+        this.shapes.pole_base.draw(context, program_state, button_transform, this.materials.test4.override({color: hex_color("#9370db")}));
     }
 
 
@@ -537,10 +567,10 @@ export class GolfBallFantasy extends Scene {
             program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
         }
 
-
-
-        // Temporarily draw the game over scene
+        // Draw the game over scene
         this.draw_game_over(context, program_state);
+
+        this.draw_dominoes(context, program_state);
 
     }
 }
