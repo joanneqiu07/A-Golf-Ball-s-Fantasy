@@ -72,6 +72,7 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball2_transform = Mat4.translation(12,-2,0);
         this.hit_plane_count = 0;
         this.is_stopped = false;
+        this.is_bounced = false;
 
         this.domino_dimension = {x: 1, y: 6, z: 3};
         this.dominoes = [0,1,2,3,4,5,6,7].map((n) => {
@@ -172,7 +173,7 @@ export class GolfBallFantasy extends Scene {
 
     // Determine if a point (x, y) is in the line segment between (x1, y1) and (x2, y2)
     onLine(x, y, x1, y1, x2, y2) {
-        const error = 10.;
+        const error = 0.8;
         const slope_diff = (y-y1)*(x2-x1) - (y2-y1)*(x-x1);
         const isOnLine = (slope_diff <= 0) && (Math.abs(slope_diff) <= error);
         // console.log(x, y, x1, y1, x2, y2, isOnLine);
@@ -240,7 +241,7 @@ export class GolfBallFantasy extends Scene {
         // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
         let golf_velocity = 3;
-        // if (this.hit_plane_count === 0)
+        if (this.hit_plane_count === 0)
             this.golf_ball_velocity.x = 3;
         let golf_ball_transform = Mat4.identity();
         golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 0, 1, 0));
@@ -343,6 +344,27 @@ export class GolfBallFantasy extends Scene {
 
     draw_dominoes(context, program_state) {
 
+        if (!this.dominoes[0].is_falling) {
+            // Detect if the ball hits the first domino
+            const golf_ball_center = this.current_golf_ball_position.times(vec4(0,0,0,1));
+            const domino_right_x = this.dominoes[0].center.x + 0.5,
+                domino_top_y = this.dominoes[0].center.y + this.domino_dimension.y/2,
+                domino_bottom_y = this.dominoes[0].center.y - this.domino_dimension.y/2,
+                golf_ball_left_x = golf_ball_center[0]-1, golf_ball_left_y = golf_ball_center[1];
+            if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y)) {
+                this.dominoes[0].is_falling = true;
+                // Let the golf ball bounce back a little
+                this.golf_ball_velocity = {x: 1, y: 0};
+                this.golf_ball_acceleration = {x: -1, y: 0};
+                this.is_bounced = true;
+                console.log("hit");
+            }
+        }
+        else if (this.golf_ball_velocity.x <= 0.02) { // After the ball is bounced by the domino
+            this.golf_ball_acceleration = {x: 0, y: 0};
+            this.golf_ball_velocity = {x: 0, y: 0};
+            this.is_stopped = true;
+        }
         let button_transform = Mat4.translation(-74, -34, 0).times(Mat4.rotation(Math.PI/2, 1, 0, 0));
 
         for (let idx in this.dominoes) {
@@ -406,6 +428,7 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball_velocity = {x: -1*v1, y: v1};
     }
 
+    // TODO: drag the golf ball up to the scene 2 platform
     draw_scene2(context, program_state, dt) {
         // Draw the first plane
         let plane1_x = 12 + 1/Math.sqrt(2.), plane1_y = -8 - 1/Math.sqrt(2.);
