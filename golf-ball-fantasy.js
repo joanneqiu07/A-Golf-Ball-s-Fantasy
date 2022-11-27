@@ -395,8 +395,10 @@ export class GolfBallFantasy extends Scene {
         ////////////
 
         // Control the motion of the dominoes from left to right
-        for (let i = this.dominoes.length - 2; i >= 0; i--) { // Control the ith domino
+        // for (let i = this.dominoes.length - 2; i >= 0; i--) { // Control the ith domino
+        for (let i = 0; i <= this.dominoes.length - 2; i++) {
             let this_domino = this.dominoes[i];
+            let next_domino = this.dominoes[i+1];
             // State 1: has not started to fall
             if (!this_domino.is_falling) {
                 //pass
@@ -405,7 +407,7 @@ export class GolfBallFantasy extends Scene {
                 // State 2: started to fall and has not collided with the domino to the right
                 // Check collision with the domino to the right
                 const right_tip = this_domino.transform.times(vec4(-1,1,0,1));
-                let next_domino = this.dominoes[i+1];
+
                 let error = 0.04;
                 if (right_tip[0] <= next_domino.center.x + this.domino_dimension.x/2 + error) { /////
                     // if (false) { ///////////////
@@ -430,8 +432,26 @@ export class GolfBallFantasy extends Scene {
                     // console.log(this_domino.transform.times(vec4(0,0,0,1)));
                 }
             }
+            else if (!this_domino.is_fallen) {
+                // State 3: collided with the domino to the right and moving together
+                    const next_dom_top = next_domino.transform.times(vec4(1,1,0,1)),
+                        next_dom_bottom = next_domino.transform.times(vec4(1,-1,0,1)),
+                        this_dom_bottom_left = this_domino.transform.times(vec4(-1,-1,0,1));
+                    const y = next_dom_top[1] - next_dom_bottom[1],
+                        x = next_dom_bottom[0] - next_dom_top[0];
+                    const next_dom_rot_angle = Math.atan(x/y);
+                    const d = this.domino_distance - 1/Math.cos(next_dom_rot_angle);
+                    const this_dom_rot_angle = next_dom_rot_angle + Math.asin(d/this.domino_dimension.y*Math.cos(next_dom_rot_angle));
+                    const delta_angle = this_dom_rot_angle - this_domino.rotation_angle;
+                        this_domino.rotation_angle = this_dom_rot_angle;
+                        const bottom_left_pt = this_domino.transform.times(vec4(-1,-1,0,1));
+                        let rotation_transform = Mat4.translation(bottom_left_pt[0], bottom_left_pt[1], bottom_left_pt[2])
+                            .times(Mat4.rotation(delta_angle, 0, 0, 1))
+                            .times(Mat4.translation(-bottom_left_pt[0], -bottom_left_pt[1], -bottom_left_pt[2]));
+                        this_domino.transform = rotation_transform.times(this_domino.transform);
+            }
 
-            // State 3: collided with the domino to the right and moving together
+
             // State 4: fell down
         }
 
