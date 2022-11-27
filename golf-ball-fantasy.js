@@ -75,15 +75,17 @@ export class GolfBallFantasy extends Scene {
         this.is_bounced = false;
 
         this.domino_dimension = {x: 1, y: 6, z: 3};
+        this.domino_distance = 4;
         this.dominoes = [0,1,2,3,4,5,6,7].map((n) => {
-            const center = {x: -39.5 - n*4, y: -32, z: 0};
+            const center = {x: -39.5 - n*this.domino_distance, y: -32, z: 0};
             return {
                 "center": center,
                 "transform": Mat4.translation(center.x, center.y, center.z).times(Mat4.scale(this.domino_dimension.x/2, this.domino_dimension.y/2, this.domino_dimension.z/2)),
                 "is_falling": false,
                 "is_collided": false,  // If the domino collided with the right one or the button
+                "is_fallen": false,
                 "angular_speed": 0.0,
-                "angular_acceleration": 0.0,
+                // "angular_acceleration": 0.0,
                 "rotation_angle": 0.0,
             };
         });
@@ -342,7 +344,17 @@ export class GolfBallFantasy extends Scene {
         this.shapes.pole_base.draw(context,program_state,pole_base_transform,this.materials.pole.override({color: pole_base_color}));
     }
 
-    draw_dominoes(context, program_state) {
+    draw_dominoes(context, program_state, dt) {
+        const final_golf_ball_speed = 1; // The speed of the golf ball after it collides with the domino
+        const domino_height = this.domino_dimension.y /* * 0.024 */;
+        // Set the angular speed of the first domino when the ball hits it
+        const set_initial_angular_speed = (v = this.golf_ball_velocity.x) => {
+            const initial_golf_ball_velocity = v;
+            const golf_ball_mass = 0.046, domino_mass = 0.05;
+            const domino_energy = 1/2*golf_ball_mass*(initial_golf_ball_velocity**2 - final_golf_ball_speed**2);
+            this.dominoes[0].angular_speed = Math.sqrt(6*domino_energy/domino_mass)/domino_height;
+            console.log( this.dominoes[0].angular_speed);
+        }
 
         if (!this.dominoes[0].is_falling) {
             // Detect if the ball hits the first domino
@@ -352,9 +364,12 @@ export class GolfBallFantasy extends Scene {
                 domino_bottom_y = this.dominoes[0].center.y - this.domino_dimension.y/2,
                 golf_ball_left_x = golf_ball_center[0]-1, golf_ball_left_y = golf_ball_center[1];
             if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y)) {
+                // Let the first domino start to fall
                 this.dominoes[0].is_falling = true;
+                set_initial_angular_speed();
                 // Let the golf ball bounce back a little
-                this.golf_ball_velocity = {x: 1, y: 0};
+                console.log(1111);
+                this.golf_ball_velocity = {x: final_golf_ball_speed, y: 0};
                 this.golf_ball_acceleration = {x: -1, y: 0};
                 this.is_bounced = true;
                 console.log("hit");
@@ -362,9 +377,64 @@ export class GolfBallFantasy extends Scene {
         }
         else if (this.golf_ball_velocity.x <= 0.02) { // After the ball is bounced by the domino
             this.golf_ball_acceleration = {x: 0, y: 0};
+            // console.log(2222);
+            // console.log(this.dominoes[0].transform.times(vec4(0,0,0,1)));
             this.golf_ball_velocity = {x: 0, y: 0};
             this.is_stopped = true;
         }
+
+        //////////// Let the domino fall at start for now
+        if (!this.dominoes[0].is_falling)
+        {
+            this.dominoes[0].is_falling = true;
+            set_initial_angular_speed(3);
+        }
+        // console.log(3/(this.domino_dimension.y)*Math.sqrt(3*golf_ball_mass*golf_ball_speed/domino_mass));
+        // console.log(this.dominoes[0].angular_speed );
+        // console.log(this.dominoes[0].transform.times(vec4(0,0,0,1)));
+        ////////////
+
+        // Control the motion of the dominoes from left to right
+        for (let i = this.dominoes.length - 2; i >= 0; i--) { // Control the ith domino
+            let this_domino = this.dominoes[i];
+            // State 1: has not started to fall
+            if (!this_domino.is_falling) {
+                //pass
+            }
+            else if (!this_domino.is_collided){
+                // State 2: started to fall and has not collided with the domino to the right
+                // Check collision with the domino to the right
+                const right_tip = this_domino.transform.times(vec4(-1,1,0,1));
+                let next_domino = this.dominoes[i+1];
+                let error = 0.04;
+                if (right_tip[0] <= next_domino.center.x + this.domino_dimension.x/2 + error) { /////
+                    // if (false) { ///////////////
+                    // Let the next domino start to fall
+                    // console.log("dom", i, " collides with dom", i+1);
+                    next_domino.is_falling = true; /////////
+                    this_domino.is_collided = true; ////////
+                    // Set the angular speeds after collision
+                    next_domino.angular_speed = this_domino.angular_speed = this_domino.angular_speed / Math.sqrt(2);
+                }
+                else {  // The domino has not contacted with the next one
+                    const angular_acceleration = 3*9.8/2/domino_height*Math.sin(this_domino.rotation_angle);
+                    this_domino.angular_speed = this_domino.angular_speed + angular_acceleration*dt;
+                    const delta_angle = this_domino.angular_speed*dt;
+                    this_domino.rotation_angle = (this_domino.rotation_angle + delta_angle);
+                    // console.log(this_domino.rotation_angle);
+                    const bottom_left_pt = this_domino.transform.times(vec4(-1,-1,0,1));
+                    let rotation_transform = Mat4.translation(bottom_left_pt[0], bottom_left_pt[1], bottom_left_pt[2])
+                        .times(Mat4.rotation(delta_angle, 0, 0, 1))
+                        .times(Mat4.translation(-bottom_left_pt[0], -bottom_left_pt[1], -bottom_left_pt[2]));
+                    this_domino.transform = rotation_transform.times(this_domino.transform);
+                    // console.log(this_domino.transform.times(vec4(0,0,0,1)));
+                }
+            }
+
+            // State 3: collided with the domino to the right and moving together
+            // State 4: fell down
+        }
+
         let button_transform = Mat4.translation(-74, -34, 0).times(Mat4.rotation(Math.PI/2, 1, 0, 0));
 
         for (let idx in this.dominoes) {
@@ -512,6 +582,8 @@ export class GolfBallFantasy extends Scene {
             program_state.set_camera(Mat4.translation(0, -10, -45));
             // program_state.set_camera(Mat4.translation(0, 10, -100));
             // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
+            program_state.set_camera(Mat4.translation(55, 30, -28)); // focus on the dominoes
+            // program_state.set_camera(Mat4.translation(40, 30, -9)); // focus on the dominoes
         }
 
         program_state.projection_transform = Mat4.perspective(
@@ -593,7 +665,7 @@ export class GolfBallFantasy extends Scene {
         // Draw the game over scene
         this.draw_game_over(context, program_state);
 
-        this.draw_dominoes(context, program_state);
+        this.draw_dominoes(context, program_state, dt);
 
     }
 }
