@@ -47,8 +47,10 @@ export class GolfBallFantasy extends Scene {
                 {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             golf_head: new Material(new defs.Phong_Shader(),
                 {ambient: 1, diffusivity: .1, color: hex_color("9E9E9E")}),
-            golf_stick: new Material(new defs.Textured_Phong(),
-                {ambient:1 , color: hex_color("808080")}),
+            // golf_stick: new Material(new defs.Textured_Phong(),
+            //     {ambient:1 , color: hex_color("808080")}),
+            golf_stick: new Material(new defs.Phong_Shader(),
+                {ambient:1 , color: hex_color("ffffff")}),
             gg: new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#000000"),
                 ambient: 1, diffusivity: 0.9, specularity: 0,
