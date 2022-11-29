@@ -50,7 +50,14 @@ export class GolfBallFantasy extends Scene {
             // golf_stick: new Material(new defs.Textured_Phong(),
             //     {ambient:1 , color: hex_color("808080")}),
             golf_stick: new Material(new defs.Phong_Shader(),
-                {ambient:1 , color: hex_color("ffffff")}),
+                {ambient:1 , color: hex_color("808080")}),
+            wood: new Material(new defs.Textured_Phong(1),
+                {ambient: 1, diffusitivity: .5, smoothness: 50, color:hex_color("000000"),
+                texture: new Texture("assets/wood.jpeg", "NEAREST")}),
+            plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
+            metal: new Material(new Gouraud_Shader(),
+                {diffusivity: .2, specularity: 1, color: hex_color('#80FFFF')}),
             gg: new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#000000"),
                 ambient: 1, diffusivity: 0.9, specularity: 0,
@@ -98,6 +105,10 @@ export class GolfBallFantasy extends Scene {
         this.velocity = 0;
         this.isHit = 0;
 
+        // golf_club_material
+        this.m_index = 0;
+        this.damping = 0;
+
         // dominoes
         this.domino_dimension = {x: 1, y: 6, z: 3};
         this.domino_distance = 4;
@@ -125,10 +136,16 @@ export class GolfBallFantasy extends Scene {
         // let debug = false;
     }
 
+    set_materials() {
+        this.m_index += 1;
+        this.m_index %= 4;
+    }
+
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Lift/Pause", ["m"], () => this.lift ^= 1);
         this.key_triggered_button("Swing", ['n'], () => this.release ^= 1);
+        this.key_triggered_button("Change Golf Club's material", ['q'], this.set_materials);
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
         this.key_triggered_button("Camera on Ball", ['c'], () => this.camera_on_ball = (this.camera_on_ball+1)%3);
     }
@@ -297,7 +314,22 @@ export class GolfBallFantasy extends Scene {
         this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
         this.golf_head_model = this.golf_club_model.times(Mat4.translation(0, -1, 4))
             .times(Mat4.scale(2, .1, 5.5));
-        this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
+        if (this.m_index === 0){
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
+            this.damping = .9995;
+        }
+        else if (this.m_index == 1) {
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.wood);
+            this.damping = .999;
+        }
+        else if (this.m_index == 2) {
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.plastic);
+            this.damping = .99;
+        }
+        else if (this.m_index == 3) {
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.metal);
+            this.damping = .9999;
+        }
     }
 
     pendulum_update(dt, damping) {
@@ -326,7 +358,7 @@ export class GolfBallFantasy extends Scene {
             }
 
             if (this.is_Hit)
-                this.pendulum_update(dt, .995);
+                this.pendulum_update(dt, this.damping);
             else this.pendulum_update(dt, .99995);
         }
         if (this.current_golf_ball_position.times(vec4(0,0,0,1))[1] < 0) this.club_angle = 0;
@@ -776,6 +808,9 @@ class Gouraud_Shader extends Shader {
         // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the
         // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
         varying vec3 N, vertex_worldspace;
+        // with Gouraud shading, the fragment shader interpolates colors
+        varying vec4 color;
+        
         // ***** PHONG SHADING HAPPENS HERE: *****                                       
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ){                                        
             // phong_model_lights():  Add up the lights' contributions.
@@ -823,6 +858,10 @@ class Gouraud_Shader extends Shader {
                 // The final normal vector in screen space.
                 N = normalize( mat3( model_transform ) * normal / squared_scale);
                 vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
+                
+                //color calculation for Gouraud shading
+                color = vec4( shape_color.xyz * ambient, shape_color.w );
+                color.xyz += phong_model_lights( normalize(N), vertex_worldspace );
             } `;
     }
 
@@ -833,9 +872,13 @@ class Gouraud_Shader extends Shader {
         return this.shared_glsl_code() + `
             void main(){                                                           
                 // Compute an initial (ambient) color:
-                gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+                // gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
                 // Compute the final color with contributions from lights:
-                gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+                // gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+                
+                // update the fragment color since we have calculated color in the vertex shader.
+                gl_FragColor = color;
+                gl_FragColor.xyz = color.xyz;
             } `;
     }
 
