@@ -22,7 +22,7 @@ export class GolfBallFantasy extends Scene {
             text: new Text_Line(35),
             pole_base: new defs.Capped_Cylinder(10,100,[[0, 1], [0,1]]),
             flag: new defs.Rounded_Closed_Cone(20,100,[[0, 1], [0,1]]),
-
+            axis:new defs.Axis_Arrows(),
         };
 
         // *** Materials
@@ -34,21 +34,19 @@ export class GolfBallFantasy extends Scene {
             ring: new Material(new Ring_Shader()),
             test3: new Material(new Ring_Shader(),
                 {ambient: 1, color: hex_color("#88ccff")}),
+            test4: new Material(new defs.Phong_Shader(),
+                {ambient: 0.8, diffusivity: .6, color: hex_color("#ffffff")}),
             golf_ball: new Material(new Textured_Phong(), {
                 color: hex_color("#ffffff"),
                 ambient: 0.5, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/golf_ball.jpg", "NEAREST")
-                }),
+            }),
             pole: new Material(new defs.Phong_Shader(),
                 {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             flag: new Material(new defs.Phong_Shader(),
                 {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
-            golf_head: new Material(new Texture_Rotate(),
-                {
-                    color: color(0, 0, 0, 1),
-                    ambient: 1, diffusivity: .1, specularity: .0,
-                    texture: new Texture("assets/stars.png", "NEAREST") // Texture class
-                }),
+            golf_head: new Material(new defs.Phong_Shader(),
+                {ambient: 1, diffusivity: .1, color: hex_color("9E9E9E")}),
             golf_stick: new Material(new defs.Textured_Phong(),
                 {ambient:1 , color: hex_color("808080")}),
             gg: new Material(new defs.Textured_Phong(1), {
@@ -72,22 +70,63 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball_position = Mat4.identity();
         this.golf_ball_position = this.golf_ball_position.times(Mat4.translation(-20, 0, 0));
         this.initial_fall = 0;
-        this.current_golf_ball_position = Mat4.identity();
+        this.current_golf_ball_position = this.golf_ball_position;
+        this.hit_time = 0;
 
         this.golf_ball_velocity = {x: 0, y: 0};
-        this.golf_ball_acceleration = {x: 0, y: -9.8};
+        this.golf_ball_acceleration = {x: 0, y: 0};
         this.golf_ball2_transform = Mat4.translation(12,-2,0);
         this.hit_plane_count = 0;
+        this.is_stopped = false;
+        this.is_bounced = false;
 
         this.camera_on_ball = 0;
-        // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
 
+        // bottons control
+        this.lift = 0;
+        this.release = 0;
+
+        // golf_club
+        this.golf_club_model = Mat4.identity();
+        this.golf_club_model = this.golf_club_model.times(Mat4.translation(-21.2, 10, -1))
+            .times(Mat4.scale(.2, 10, .2));
+        this.golf_head_model = Mat4.identity();
+        this.club_angle = 0;
+        this.reachesMax = 0;
+        this.velocity = 0;
+        this.isHit = 0;
+
+        // dominoes
+        this.domino_dimension = {x: 1, y: 6, z: 3};
+        this.domino_distance = 4;
+        this.dominoes = [0,1,2,3,4,5,6,7].map((n) => {
+            const center = {x: -39.5 - n*this.domino_distance, y: -32, z: 0};
+            return {
+                "center": center,
+                "transform": Mat4.translation(center.x, center.y, center.z).times(Mat4.scale(this.domino_dimension.x/2, this.domino_dimension.y/2, this.domino_dimension.z/2)),
+                // "is_falling": false,
+                // "is_collided": false,  // If the domino collided with the right one or the button
+                // "is_fallen": false,
+                "state": "sit still", // states include "sit still", "fall" (after hit by the right domino), and "collided" (with the left domino)
+                "angular_speed": 0.0,
+                // "angular_acceleration": 0.0,
+                "rotation_angle": 0.0,
+            };
+        });
+        this.button_loc = {x: -74, y: -34, z:0};
+        console.log(this.dominoes);
+
+        this.you_win = false;
+
+        // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
+        this.debug = true;
+        // let debug = false;
     }
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Pause golf club", ["v"], () => this.program_state.animate ^= 1);
-        this.key_triggered_button("Release golf club", ['b'], () => this.release ^= 1);
+        this.key_triggered_button("Lift/Pause", ["m"], () => this.lift ^= 1);
+        this.key_triggered_button("Swing", ['n'], () => this.release ^= 1);
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
         this.key_triggered_button("Camera on Ball", ['c'], () => this.camera_on_ball = (this.camera_on_ball+1)%3);
     }
@@ -144,9 +183,9 @@ export class GolfBallFantasy extends Scene {
         return {dx, dy};
     }
 
-    // Determine if a point (x, y) is in the line segment between (x1, y1) and (x2, y2)
-    onLine(x, y, x1, y1, x2, y2) {
-        const error = 0.8;
+    // Determine if a point (x, y) is in the line between (x1, y1) and (x2, y2)
+    onLine(x, y, x1, y1, x2, y2, error = 0.8) {
+        // const error = 0.8;
         const slope_diff = (y-y1)*(x2-x1) - (y2-y1)*(x-x1);
         const isOnLine = (slope_diff <= 0) && (Math.abs(slope_diff) <= error);
         // console.log(x, y, x1, y1, x2, y2, isOnLine);
@@ -165,9 +204,9 @@ export class GolfBallFantasy extends Scene {
     onPlane(golf_ball_transform, golf_ball_radius, plane_transform) {
         const golf_ball_center = golf_ball_transform.times(vec4(0,0,0,1));
         const plane_l = plane_transform.times(vec4(-1,1,0,1)),
-              plane_r = plane_transform.times(vec4(1,1,0,1));
+            plane_r = plane_transform.times(vec4(1,1,0,1));
         return this.onLine(golf_ball_center[0], golf_ball_center[1]-golf_ball_radius,
-                            plane_l[0], plane_l[1], plane_r[0], plane_r[1]);
+            plane_l[0], plane_l[1], plane_r[0], plane_r[1]);
     }
 
     // Check if the golf ball is on the right of the scene 2 platform
@@ -210,40 +249,86 @@ export class GolfBallFantasy extends Scene {
         this.shapes.sphere.draw(context, program_state, this.golf_ball_position, this.materials.golf_ball);
     }
 
-    draw_golf_ball_moving(context, program_state, t, platform_transform) {
+    draw_golf_ball_moving(context, program_state, t, platform_transform, dt) {
         // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
         let golf_velocity = 3;
+        if (this.hit_plane_count === 0)
+            this.golf_ball_velocity.x = 3;
         let golf_ball_transform = Mat4.identity();
         golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 0, 1, 0));
+        // const {dx, dy} = this.delta_displacement(dt);
+        // this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
+
+        // Let the ball fall
+        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0] > 10) {
+            this.golf_ball_acceleration.y = -9.8;
+        }
+        // Prevent passing through the second plane
+        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0]+1 >= 13 && this.current_golf_ball_position.times(vec4(0,0,0,1))[1]-1 < -1 && this.hit_plane_count === 0) {
+            this.golf_ball_velocity.x = 0;
+        }
         if (this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
             golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
+            this.draw_scene2(context, program_state, dt);
         }
         else{
             this.initial_fall = t;
+            this.current_golf_ball_position = golf_ball_transform;
         }
-
         // console.log(this.y_distance(platform_transform, golf_ball_transform));
-        this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+        // this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
+        this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
         //console.log(golf_ball_transform);
         return golf_ball_transform;
     }
     
     draw_golf_clubs(context, program_state, angle) {
-        let golf_club_transform = Mat4.identity();
-        let stick = golf_club_transform.times(Mat4.translation(-21.2, 10, -1))
+        this.golf_club_model = Mat4.identity();
+        this.golf_club_model = this.golf_club_model.times(Mat4.translation(-21.2, 10, -1))
             .times(Mat4.translation(.2, 10, 0))
             .times(Mat4.rotation(- angle, 0, 0, 1))
             .times(Mat4.translation(-.2, -10, 0))
             .times(Mat4.scale(.2, 10, .2));
-        this.shapes.cube.draw(context, program_state, stick, this.materials.golf_stick);
-        let head = stick.times(Mat4.translation(0, -1, 4))
-            .times(Mat4.scale(1.2, .1, 5.5));
-        this.shapes.sphere.draw(context, program_state, head, this.materials.golf_head);
+        this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
+        this.golf_head_model = this.golf_club_model.times(Mat4.translation(0, -1, 4))
+            .times(Mat4.scale(2, .1, 5.5));
+        this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
+    }
 
-     }
+    pendulum_update(dt, damping) {
+        let acceleration = - 9.8 * dt * dt * Math.sin(this.club_angle);
+        this.velocity += acceleration;
+        this.velocity *= damping;
+        this.club_angle += this.velocity;
+    }
+
+    swing_golf_club(dt) {
+        const max_angle = .5 * Math.PI;
+        let angle = dt * Math.PI * .2;
+        if (this.club_angle > max_angle) this.reachesMax = 1;
+        else if (this.club_angle <= 0) this.reachesMax = 0;
+
+        if (!this.release) {
+            if (this.lift) {
+                if (this.reachesMax) this.club_angle -= angle;
+                else this.club_angle += angle;
+            }
+        }
+        else {
+            if ((this.club_angle <= 0) && (!this.is_Hit)) {
+                this.is_Hit = 1;
+                this.velocity = -1 * this.velocity;
+            }
+
+            if (this.is_Hit)
+                this.pendulum_update(dt, .995);
+            else this.pendulum_update(dt, .99995);
+        }
+        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[1] < 0) this.club_angle = 0;
+    }
 
     draw_flag(context,program_state){
         //Red flag
@@ -269,6 +354,165 @@ export class GolfBallFantasy extends Scene {
         this.shapes.pole_base.draw(context,program_state,pole_base_transform,this.materials.pole.override({color: pole_base_color}));
     }
 
+    draw_dominoes(context, program_state, dt) {
+        const final_golf_ball_speed = 1; // The speed of the golf ball after it collides with the domino
+        const domino_height = this.domino_dimension.y /* * 0.024 */;
+        // Button dimension: radius = 1, height = 0.5
+        let button_transform = Mat4.translation(-74, -34, 0).times(Mat4.rotation(Math.PI/2, 1, 0, 0));
+        // Set the angular speed of the first domino when the ball hits it
+        const set_initial_angular_speed = (v = this.golf_ball_velocity.x) => {
+            const initial_golf_ball_velocity = v;
+            const golf_ball_mass = 0.046, domino_mass = 0.05;
+            const domino_energy = 1/2*golf_ball_mass*(initial_golf_ball_velocity**2 - final_golf_ball_speed**2);
+            this.dominoes[0].angular_speed = Math.sqrt(6*domino_energy/domino_mass)/domino_height;
+            console.log( this.dominoes[0].angular_speed);
+        }
+
+        const falling = (domino) => {
+            const angular_acceleration = 3*9.8/2/domino_height*Math.sin(domino.rotation_angle);
+            domino.angular_speed = domino.angular_speed + angular_acceleration*dt;
+            const delta_angle = domino.angular_speed*dt;
+            domino.rotation_angle = (domino.rotation_angle + delta_angle);
+            // console.log(domino.rotation_angle);
+            const bottom_left_pt = domino.transform.times(vec4(-1,-1,0,1));
+            let rotation_transform = Mat4.translation(bottom_left_pt[0], bottom_left_pt[1], bottom_left_pt[2])
+                .times(Mat4.rotation(delta_angle, 0, 0, 1))
+                .times(Mat4.translation(-bottom_left_pt[0], -bottom_left_pt[1], -bottom_left_pt[2]));
+            domino.transform = rotation_transform.times(domino.transform);
+            // console.log(domino.transform.times(vec4(0,0,0,1)));
+        }
+
+        if (this.dominoes[0].state === "sit still") {
+            // Detect if the ball hits the first domino
+            const golf_ball_center = this.current_golf_ball_position.times(vec4(0,0,0,1));
+            const domino_right_x = this.dominoes[0].center.x + 0.5,
+                domino_top_y = this.dominoes[0].center.y + this.domino_dimension.y/2,
+                domino_bottom_y = this.dominoes[0].center.y - this.domino_dimension.y/2,
+                golf_ball_left_x = golf_ball_center[0]-1, golf_ball_left_y = golf_ball_center[1];
+            if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y)) {
+                // Let the first domino start to fall
+                this.dominoes[0].state = "fall";
+                set_initial_angular_speed();
+                // Let the golf ball bounce back a little
+                console.log(1111);
+                this.golf_ball_velocity = {x: final_golf_ball_speed, y: 0};
+                this.golf_ball_acceleration = {x: -1, y: 0};
+                this.is_bounced = true;
+                console.log("hit");
+            }
+        }
+        else if (this.golf_ball_velocity.x <= 0.02) { // After the ball is bounced by the domino
+            this.golf_ball_acceleration = {x: 0, y: 0};
+            // console.log(2222);
+            // console.log(this.dominoes[0].transform.times(vec4(0,0,0,1)));
+            this.golf_ball_velocity = {x: 0, y: 0};
+            this.is_stopped = true;
+        }
+
+        // //////////// Let the domino fall at start for now
+        // if (this.dominoes[0].state === "sit still")
+        // {
+        //     this.dominoes[0].state = "fall";
+        //     set_initial_angular_speed(3);
+        // }
+        // // console.log(3/(this.domino_dimension.y)*Math.sqrt(3*golf_ball_mass*golf_ball_speed/domino_mass));
+        // // console.log(this.dominoes[0].angular_speed );
+        // // console.log(this.dominoes[0].transform.times(vec4(0,0,0,1)));
+        // ////////////
+
+        // Control the motion of the dominoes from left to right
+        // for (let i = this.dominoes.length - 2; i >= 0; i--) { // Control the ith domino
+        for (let i = 0; i <= this.dominoes.length - 2; i++) {
+            let this_domino = this.dominoes[i];
+            let next_domino = this.dominoes[i+1];
+
+            switch (this_domino.state) {
+                case "sit still": // State 1: has not started to fall
+                    break;
+                case "fall": // State 2: started to fall and has not collided with the domino to the right
+                    // Check collision with the domino to the right
+                    const right_tip = this_domino.transform.times(vec4(-1,1,0,1));
+                    let error = 0.04;
+                    // Check collision
+                    if (right_tip[0] <= next_domino.center.x + this.domino_dimension.x/2 + error) { /////
+                        // if (false) { ///////////////
+                        // Let the next domino start to fall
+                        // console.log("dom", i, " collides with dom", i+1);
+                        next_domino.state = "fall"; /////////
+                        this_domino.state = "collided"; ////////
+                        // Set the angular speeds after collision
+                        next_domino.angular_speed = this_domino.angular_speed = this_domino.angular_speed / Math.sqrt(2);
+                    }
+                    else {  // The domino has not contacted with the next one
+                        falling(this_domino);
+                    }
+                    break;
+                case "collided": // State 3: collided with the domino to the right and moving together
+                    const next_dom_top = next_domino.transform.times(vec4(1,1,0,1)),
+                        next_dom_bottom = next_domino.transform.times(vec4(1,-1,0,1)),
+                        this_dom_bottom_left = this_domino.transform.times(vec4(-1,-1,0,1));
+                    const y = next_dom_top[1] - next_dom_bottom[1],
+                        x = next_dom_bottom[0] - next_dom_top[0];
+                    const next_dom_rot_angle = Math.atan(x/y);
+                    const d = this.domino_distance - 1/Math.cos(next_dom_rot_angle);
+                    const this_dom_rot_angle = next_dom_rot_angle + Math.asin(d/this.domino_dimension.y*Math.cos(next_dom_rot_angle));
+                    const delta_angle = this_dom_rot_angle - this_domino.rotation_angle;
+                    this_domino.rotation_angle = this_dom_rot_angle;
+                    const bottom_left_pt = this_domino.transform.times(vec4(-1,-1,0,1));
+                    let rotation_transform = Mat4.translation(bottom_left_pt[0], bottom_left_pt[1], bottom_left_pt[2])
+                        .times(Mat4.rotation(delta_angle, 0, 0, 1))
+                        .times(Mat4.translation(-bottom_left_pt[0], -bottom_left_pt[1], -bottom_left_pt[2]));
+                    this_domino.transform = rotation_transform.times(this_domino.transform);
+                    break;
+            }
+        }
+        // The motion of the right most domino
+        let this_domino = this.dominoes[7];
+        switch (this_domino.state) {
+            case "sit still": break;
+            case "fall":
+                // Check collision with the button
+                const btn_center = button_transform.times(vec4(0,0,0,1)),
+                    domino_upper_left = this_domino.transform.times(vec4(-1,1,0,1)),
+                    domino_bottom_left = this_domino.transform.times(vec4(-1,-1,0,1));
+                const btn_top_right_x = btn_center[0] + 1,
+                    btn_top_right_y = btn_center[1] + 0.5,
+                    domino_upper_left_x = domino_upper_left[0], domino_upper_left_y = domino_upper_left[1],
+                    domino_bottom_left_x = domino_bottom_left[0], domino_bottom_left_y = domino_bottom_left[1]
+                if (this.onLine(btn_top_right_x, btn_top_right_y,
+                    domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y)) {
+                    // The domino collided with the button
+                    this_domino.state = "collided";
+                    console.log(btn_top_right_x, btn_top_right_y, domino_upper_left, domino_bottom_left);
+                    console.log("onLine");
+                }
+                else {  // The domino falls
+                    // console.log("fall");
+                    falling(this_domino);
+                }
+                break;
+            case "collided":
+                this.you_win = true;
+                break;
+        }
+        this.shapes.axis.draw(context, program_state, /*Mat4.translation(0,.5,0).times*/(button_transform), this.materials.test.override({color: hex_color("#ffff00")}));
+        // button_transform = button_transform.times(Mat4.scale(1,.5,1));
+        let button_base_transform = Mat4.translation(-74, -34-0.5, 0).times(Mat4.scale(1.2,0.5,1));
+        if (this.debug) {
+            const pt = button_transform.times(vec4(0,0,0,1));
+            console.log(pt);
+            this.debug = false;
+        }
+        // Draw the dominoes
+        for (let idx in this.dominoes) {
+            this.shapes.cube.draw(context, program_state, this.dominoes[idx].transform, this.materials.test4.override({color: hex_color("#0099ff")}));
+            // console.log("domino")
+        }
+        // Draw the button and the button base
+        this.shapes.pole_base.draw(context, program_state, button_transform, this.materials.test4.override({color: hex_color("#9370db")}));
+        this.shapes.cube.draw(context, program_state, button_base_transform, this.materials.test4.override({color: hex_color("#b2b2b2")}));
+    }
+
 
     draw_game_over(context, program_state, tank_center_loc = [-30, -70, 0]) {
         // The game over scene
@@ -285,7 +529,10 @@ export class GolfBallFantasy extends Scene {
 
         let water_lv = tank_transform.times(vec4(0,1,0,1))[1],
             tank_bottom = tank_transform.times(vec4(0,-1,0,1))[1];
-        let golf_ball_center_y = golf_ball_transform.times(vec4(0,0,0,1))[1],
+        let golf_ball_center = golf_ball_transform.times(vec4(0,0,0,1)),
+            golf_ball_center_x = golf_ball_center[0],
+            golf_ball_center_y = golf_ball_center[1],
+            golf_ball_center_z = golf_ball_center[2],
             golf_ball_bottom_y = golf_ball_center_y - 1;
         let is_show_text = (golf_ball_center_y <= water_lv);
         let h = water_lv - golf_ball_bottom_y;
@@ -303,7 +550,8 @@ export class GolfBallFantasy extends Scene {
         else if (h >= 19.8) {
             this.golf_ball_velocity = {x: 0, y: 0};
             this.golf_ball_acceleration = {x: 0, y: 0};
-
+            // this.current_golf_ball_position = Mat4.translation(golf_ball_center_x, golf_ball_center_y, golf_ball_center_z);
+            this.is_stopped = true;
         }
 
         // this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
@@ -322,6 +570,7 @@ export class GolfBallFantasy extends Scene {
         this.golf_ball_velocity = {x: -1*v1, y: v1};
     }
 
+    // TODO: drag the golf ball up to the scene 2 platform
     draw_scene2(context, program_state, dt) {
         // Draw the first plane
         let plane1_x = 12 + 1/Math.sqrt(2.), plane1_y = -8 - 1/Math.sqrt(2.);
@@ -357,10 +606,11 @@ export class GolfBallFantasy extends Scene {
             }
         }
 
-        const {dx, dy} = this.delta_displacement(dt);
-        this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
-
-        this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
+        if (!this.is_stopped) {
+            const {dx, dy} = this.delta_displacement(dt);
+            this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt / 5, 0, 0, 1));
+        }
+        // this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
         // Draw the platform
         const ground_transform = Mat4.translation(-32, -36, 0).times(Mat4.scale(8, 1, 1));
@@ -404,6 +654,8 @@ export class GolfBallFantasy extends Scene {
             program_state.set_camera(Mat4.translation(0, -10, -45));
             // program_state.set_camera(Mat4.translation(0, 10, -100));
             // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
+            // program_state.set_camera(Mat4.translation(55, 30, -28)); // focus on the dominoes
+            // program_state.set_camera(Mat4.translation(40, 30, -9)); // focus on the dominoes
         }
 
         program_state.projection_transform = Mat4.perspective(
@@ -416,34 +668,42 @@ export class GolfBallFantasy extends Scene {
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000),
                                 // new Light(vec4(0, -5, 15, 1), color(1,1,1,1), 1000)
                                 ];
-        this.program_state = program_state;
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         const yellow = hex_color("#fac91a");
         let model_transform = Mat4.identity();
 
-        let gravity = -0.5*9.8*t*t;
-        
-        const max_angle = .9 * Math.PI;
-        let a = max_angle/2;
-        let b = a;
-        let w = 0.6 * Math.PI;
-        let angle = a + b * Math.sin(w * t);
+        // this.shapes.cube.draw(context, program_state, Mat4.translation(13,0,0), this.materials.test);
 
-        // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
+        let gravity = -0.5*9.8*t*t;
 
         // Draw the ground of scene 1
 
         const ground1_transform = this.draw_ground(context, program_state);
 
-        if (t < 2.5) {
+
+        this.swing_golf_club(dt);
+        this.draw_golf_clubs(context, program_state, this.club_angle);
+
+        if (!this.is_Hit) {
             this.draw_golf_ball(context, program_state);
-            this.draw_golf_clubs(context, program_state, angle);
+            this.hit_time = t;
         }
-        else if(t < 13){
-            this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
-            this.draw_golf_clubs(context, program_state, 0);
+        else {
+            /*this.current_golf_ball_position = */this.draw_golf_ball_moving(context,
+                program_state, t-this.hit_time+2.5, ground1_transform, dt);
+
         }
+
+
+        //this.draw_golf_ball(context, program_state);
+        // if (t < 2.5) {
+        //     this.draw_golf_ball(context, program_state);
+        // }
+        // else if(t < 13){
+        //     this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+        // }
+
 
         this.draw_pole(context,program_state);
         this.draw_flag(context,program_state);
@@ -459,9 +719,9 @@ export class GolfBallFantasy extends Scene {
         if (obj_pos[1] < -2) {    // If y-coor of the object is less than -2, then relaunch the object in the initial position
             this.launch_time = t;
         }
-        if (t > 13) {
-            this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
-        }
+        // if (t > 13) {
+        //     this.draw_scene2(context, program_state, dt, this.current_golf_ball_position);
+        // }
         let position_of_golf_ball = this.current_golf_ball_position.times(vec4(0, 0, 0, 1));
         let x = position_of_golf_ball[0];
         let y = position_of_golf_ball[1]
@@ -474,10 +734,10 @@ export class GolfBallFantasy extends Scene {
             program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
         }
 
-
-
-        // Temporarily draw the game over scene
+        // Draw the game over scene
         this.draw_game_over(context, program_state);
+
+        this.draw_dominoes(context, program_state, dt);
 
     }
 }
