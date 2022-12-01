@@ -70,10 +70,11 @@ export class GolfBallFantasy extends Scene {
 
         this.launch_time = 0;
         this.golf_ball_position = Mat4.identity();
-        this.golf_ball_position = this.golf_ball_position.times(Mat4.translation(-20, 0, 0));
+        this.golf_ball_position = this.golf_ball_position.times(Mat4.translation(-35, 0, 0));
         this.initial_fall = 0;
         this.current_golf_ball_position = this.golf_ball_position;
         this.hit_time = 0;
+        this.swing_angle = -1;
 
         this.golf_ball_velocity = {x: 0, y: 0};
         this.golf_ball_acceleration = {x: 0, y: 0};
@@ -81,6 +82,7 @@ export class GolfBallFantasy extends Scene {
         this.hit_plane_count = 0;
         this.is_stopped = false;
         this.is_bounced = false;
+        this.inHole = false;
 
         this.camera_on_ball = 0;
 
@@ -90,7 +92,7 @@ export class GolfBallFantasy extends Scene {
 
         // golf_club
         this.golf_club_model = Mat4.identity();
-        this.golf_club_model = this.golf_club_model.times(Mat4.translation(-21.2, 10, -1))
+        this.golf_club_model = this.golf_club_model.times(Mat4.translation(-36.4, 10, -1))
             .times(Mat4.scale(.2, 10, .2));
         this.golf_head_model = Mat4.identity();
         this.club_angle = 0;
@@ -128,7 +130,7 @@ export class GolfBallFantasy extends Scene {
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Lift/Pause", ["m"], () => this.lift ^= 1);
-        this.key_triggered_button("Swing", ['n'], () => this.release ^= 1);
+        this.key_triggered_button("Swing", ['n'], () => this.releaseClub());
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
         this.key_triggered_button("Camera on Ball", ['c'], () => this.camera_on_ball = (this.camera_on_ball+1)%3);
     }
@@ -228,6 +230,11 @@ export class GolfBallFantasy extends Scene {
         return false;
     }
 
+    releaseClub(){
+        this.release ^= 1;
+        this.swing_angle = this.club_angle;
+    }
+
     speedUp() {
         // When the key g is pressed, increase the horizontal velocity by a certain amount
         if (this.hit_plane_count === 6)
@@ -236,7 +243,7 @@ export class GolfBallFantasy extends Scene {
 
     draw_ground(context, program_state) {
         // The ground for scene 1
-        let ground1_transform = Mat4.translation(-10, -2, 0).times(Mat4.scale(20, 1, 1));
+        let ground1_transform = Mat4.translation(-20, -2, 0).times(Mat4.scale(30, 1, 1));
         this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: this.ground_color}));
         let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
         this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: this.ground_color}));
@@ -251,30 +258,35 @@ export class GolfBallFantasy extends Scene {
         this.shapes.sphere.draw(context, program_state, this.golf_ball_position, this.materials.golf_ball);
     }
 
-    draw_golf_ball_moving(context, program_state, t, platform_transform, dt) {
+    draw_golf_ball_moving(context, program_state, t, platform_transform, dt, swing_angle) {
         // Our lil moving Golf Ball
         let golf_color = hex_color("#ffffff");
-        let golf_velocity = 3;
+        let golf_velocity = 38 * swing_angle;
         if (this.hit_plane_count === 0)
-            this.golf_ball_velocity.x = 3;
+            this.golf_ball_velocity.x = 38 * swing_angle;
         let golf_ball_transform = Mat4.identity();
-        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 0, 1, 0));
+        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 1, -1, 0));
         // const {dx, dy} = this.delta_displacement(dt);
         // this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
-
         // Let the ball fall
         if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0] > 10) {
             this.golf_ball_acceleration.y = -9.8;
         }
         // Prevent passing through the second plane
-        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0]+1 >= 13 && this.current_golf_ball_position.times(vec4(0,0,0,1))[1]-1 < -1 && this.hit_plane_count === 0) {
+        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0]+1 >= 13 && this.current_golf_ball_position.times(vec4(0,0,0,1))[1]-1 < -1 && this.hit_plane_count === 0 && golf_velocity < 16) {
             this.golf_ball_velocity.x = 0;
+            this.inHole = true;
         }
         if (this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
             golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
-            this.draw_scene2(context, program_state, dt);
+            if(this.inHole)
+                this.draw_scene2(context, program_state, dt);
+            if (!this.is_stopped) {
+                const {dx, dy} = this.delta_displacement(dt);
+                this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt / 5, 0, 0, 1));
+            }
         }
         else{
             this.initial_fall = t;
@@ -289,7 +301,7 @@ export class GolfBallFantasy extends Scene {
     
     draw_golf_clubs(context, program_state, angle) {
         this.golf_club_model = Mat4.identity();
-        this.golf_club_model = this.golf_club_model.times(Mat4.translation(-21.2, 10, -1))
+        this.golf_club_model = this.golf_club_model.times(Mat4.translation(-36.4, 10, -1))
             .times(Mat4.translation(.2, 10, 0))
             .times(Mat4.rotation(- angle, 0, 0, 1))
             .times(Mat4.translation(-.2, -10, 0))
@@ -322,11 +334,10 @@ export class GolfBallFantasy extends Scene {
         else {
             if ((this.club_angle <= 0) && (!this.is_Hit)) {
                 this.is_Hit = 1;
-                this.velocity = -1 * this.velocity;
             }
 
             if (this.is_Hit)
-                this.pendulum_update(dt, .995);
+                this.pendulum_update(dt, .895);
             else this.pendulum_update(dt, .99995);
         }
         if (this.current_golf_ball_position.times(vec4(0,0,0,1))[1] < 0) this.club_angle = 0;
@@ -516,9 +527,9 @@ export class GolfBallFantasy extends Scene {
     }
 
 
-    draw_game_over(context, program_state, tank_center_loc = [-30, -70, 0]) {
+    draw_game_over(context, program_state, tank_center_loc = [0, -70, 0]) {
         // The game over scene
-        let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(30,10,1));
+        let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(100,10,1));
         let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+1);
         this.shapes.text.set_string("GAME OVER", context.context);
         // Modeling a falling golf ball
@@ -608,10 +619,6 @@ export class GolfBallFantasy extends Scene {
             }
         }
 
-        if (!this.is_stopped) {
-            const {dx, dy} = this.delta_displacement(dt);
-            this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt / 5, 0, 0, 1));
-        }
         // this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
         // Draw the platform
@@ -653,7 +660,7 @@ export class GolfBallFantasy extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
-            program_state.set_camera(Mat4.translation(0, -10, -45));
+            program_state.set_camera(Mat4.translation(10, -10, -60));
             // program_state.set_camera(Mat4.translation(0, 10, -100));
             // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
             // program_state.set_camera(Mat4.translation(55, 30, -28)); // focus on the dominoes
@@ -692,9 +699,8 @@ export class GolfBallFantasy extends Scene {
             this.hit_time = t;
         }
         else {
-            /*this.current_golf_ball_position = */this.draw_golf_ball_moving(context,
-                program_state, t-this.hit_time+2.5, ground1_transform, dt);
-
+            this.draw_golf_ball_moving(context,
+                program_state, t-this.hit_time+2.5, ground1_transform, dt, this.swing_angle);
         }
 
 
