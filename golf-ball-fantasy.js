@@ -75,6 +75,7 @@ export class GolfBallFantasy extends Scene {
         this.hit_plane_count = 0;
         this.is_stopped = false;
         this.is_bounced = false;
+        this.inHole = false;
 
         this.camera_on_ball = 0;
 
@@ -257,23 +258,28 @@ export class GolfBallFantasy extends Scene {
         if (this.hit_plane_count === 0)
             this.golf_ball_velocity.x = 38 * swing_angle;
         let golf_ball_transform = Mat4.identity();
-        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 0, 1, 0));
+        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 1, -1, 0));
         // const {dx, dy} = this.delta_displacement(dt);
         // this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
-
         // Let the ball fall
         if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0] > 10) {
             this.golf_ball_acceleration.y = -9.8;
         }
         // Prevent passing through the second plane
-        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0]+1 >= 13 && this.current_golf_ball_position.times(vec4(0,0,0,1))[1]-1 < -1 && this.hit_plane_count === 0) {
+        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0]+1 >= 13 && this.current_golf_ball_position.times(vec4(0,0,0,1))[1]-1 < -1 && this.hit_plane_count === 0 && golf_velocity < 16) {
             this.golf_ball_velocity.x = 0;
+            this.inHole = true;
         }
         if (this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
             golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
-            this.draw_scene2(context, program_state, dt);
+            if(this.inHole)
+                this.draw_scene2(context, program_state, dt);
+            if (!this.is_stopped) {
+                const {dx, dy} = this.delta_displacement(dt);
+                this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt / 5, 0, 0, 1));
+            }
         }
         else{
             this.initial_fall = t;
@@ -602,10 +608,6 @@ export class GolfBallFantasy extends Scene {
             }
         }
 
-        if (!this.is_stopped) {
-            const {dx, dy} = this.delta_displacement(dt);
-            this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt / 5, 0, 0, 1));
-        }
         // this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
         // Draw the platform
@@ -684,7 +686,6 @@ export class GolfBallFantasy extends Scene {
         if (!this.is_Hit) {
             this.draw_golf_ball(context, program_state);
             this.hit_time = t;
-            console.log(this.club_angle);
         }
         else {
             this.draw_golf_ball_moving(context,
