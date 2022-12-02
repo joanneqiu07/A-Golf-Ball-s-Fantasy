@@ -268,7 +268,13 @@ export class GolfBallFantasy extends Scene {
         // console.log(x, y, x1, y1, x2, y2, isOnLine);
         return isOnLine;
     }
-
+    onLine2(x, y, x1, y1, x2, y2, error = 0.8) {
+        // const error = 0.8;
+        const slope_diff = (y-y1)*(x2-x1) - (y2-y1)*(x-x1);
+        const isOnLine = Math.abs(slope_diff) <= error;
+        // console.log(x, y, x1, y1, x2, y2, isOnLine);
+        return isOnLine;
+    }
     /*
     Determine if the golf ball is on a plane in scene 2
     It is on the plane if (the golf ball center's y-coor - r) is on the plane
@@ -587,7 +593,9 @@ export class GolfBallFantasy extends Scene {
                     btn_top_right_y = btn_center[1] + 0.5,
                     domino_upper_left_x = domino_upper_left[0], domino_upper_left_y = domino_upper_left[1],
                     domino_bottom_left_x = domino_bottom_left[0], domino_bottom_left_y = domino_bottom_left[1]
-                if (this.onLine(btn_top_right_x, btn_top_right_y,
+                // if (this.onLine(btn_top_right_x, btn_top_right_y,
+                //     domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y, 1.3)) {
+                if (this.onLine2(btn_top_right_x, btn_top_right_y,
                     domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y, 1.3)) {
                     // The domino collided with the button
                     this_domino.state = "collided";
