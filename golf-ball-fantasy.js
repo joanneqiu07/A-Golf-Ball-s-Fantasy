@@ -731,7 +731,7 @@ export class GolfBallFantasy extends Scene {
         // this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
         // Draw the platform
-        const ground_transform = Mat4.translation(-32, -36, 0).times(Mat4.scale(8, 1, 1));
+        const ground_transform = Mat4.translation(-52, -36, 0).times(Mat4.scale(28, 1, 1));
         this.shapes.cube.draw(context, program_state, ground_transform, this.materials.test.override({color: this.ground_color}));
 
         // Checking landing on the platform
