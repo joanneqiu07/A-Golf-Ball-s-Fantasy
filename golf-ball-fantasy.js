@@ -468,7 +468,8 @@ export class GolfBallFantasy extends Scene {
             const initial_golf_ball_velocity = v;
             const golf_ball_mass = 0.046, domino_mass = 0.05;
             const domino_energy = 1/2*golf_ball_mass*(initial_golf_ball_velocity**2 - final_golf_ball_speed**2);
-            this.dominoes[0].angular_speed = Math.sqrt(6*domino_energy/domino_mass)/domino_height;
+            this.initial_angular_speed =  Math.sqrt(6*domino_energy/domino_mass)/domino_height;
+            this.dominoes[0].angular_speed = this.initial_angular_speed;
             console.log( this.dominoes[0].angular_speed);
         }
 
@@ -546,7 +547,7 @@ export class GolfBallFantasy extends Scene {
                         next_domino.state = "fall"; /////////
                         this_domino.state = "collided"; ////////
                         // Set the angular speeds after collision
-                        next_domino.angular_speed = this_domino.angular_speed = this_domino.angular_speed / Math.sqrt(2);
+                        next_domino.angular_speed = this_domino.angular_speed =  this.initial_angular_speed;
                     }
                     else {  // The domino has not contacted with the next one
                         falling(this_domino);
