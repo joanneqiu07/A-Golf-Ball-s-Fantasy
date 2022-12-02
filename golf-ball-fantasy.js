@@ -388,19 +388,19 @@ export class GolfBallFantasy extends Scene {
             .times(Mat4.scale(2, .1, 5.5));
         if (this.m_index === 0){
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
-            this.damping = .9995;
+            this.damping = .8995;
         }
         else if (this.m_index == 1) {
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.wood);
-            this.damping = .999;
+            this.damping = .899;
         }
         else if (this.m_index == 2) {
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.plastic);
-            this.damping = .99;
+            this.damping = .89;
         }
         else if (this.m_index == 3) {
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.metal);
-            this.damping = .9999;
+            this.damping = .8999;
         }
     }
 
