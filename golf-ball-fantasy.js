@@ -50,7 +50,14 @@ export class GolfBallFantasy extends Scene {
             // golf_stick: new Material(new defs.Textured_Phong(),
             //     {ambient:1 , color: hex_color("808080")}),
             golf_stick: new Material(new defs.Phong_Shader(),
-                {ambient:1 , color: hex_color("ffffff")}),
+                {ambient:1 , color: hex_color("808080")}),
+            wood: new Material(new defs.Textured_Phong(1),
+                {ambient: 1, diffusitivity: .5, smoothness: 50, color:hex_color("000000"),
+                    texture: new Texture("assets/wood.jpeg", "NEAREST")}),
+            plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
+            metal: new Material(new Gouraud_Shader(),
+                {diffusivity: .2, specularity: 1, color: hex_color('#80FFFF')}),
             gg: new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#000000"),
                 ambient: 1, diffusivity: 0.9, specularity: 0,
@@ -85,6 +92,10 @@ export class GolfBallFantasy extends Scene {
         this.inHole = false;
 
         this.camera_on_ball = 0;
+
+        // golf_club_material
+        this.m_index = 0;
+        this.damping = 0;
 
         // bottons control
         this.lift = 0;
@@ -127,10 +138,16 @@ export class GolfBallFantasy extends Scene {
         // let debug = false;
     }
 
+    set_materials() {
+        this.m_index += 1;
+        this.m_index %= 4;
+    }
+
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Lift/Pause", ["m"], () => this.lift ^= 1);
         this.key_triggered_button("Swing", ['n'], () => this.releaseClub());
+        this.key_triggered_button("Change Golf Club's material", ['q'], this.set_materials);
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
         this.key_triggered_button("Camera on Ball", ['c'], () => this.camera_on_ball = (this.camera_on_ball+1)%3);
     }
@@ -298,8 +315,8 @@ export class GolfBallFantasy extends Scene {
         //console.log(golf_ball_transform);
         return golf_ball_transform;
     }
-    
-    draw_golf_clubs(context, program_state, angle) {
+
+    draw_golf_clubs(context, program_state, angle, materials) {
         this.golf_club_model = Mat4.identity();
         this.golf_club_model = this.golf_club_model.times(Mat4.translation(-36.4, 10, -1))
             .times(Mat4.translation(.2, 10, 0))
@@ -309,7 +326,22 @@ export class GolfBallFantasy extends Scene {
         this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
         this.golf_head_model = this.golf_club_model.times(Mat4.translation(0, -1, 4))
             .times(Mat4.scale(2, .1, 5.5));
-        this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
+        if (this.m_index === 0){
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
+            this.damping = .9995;
+        }
+        else if (this.m_index == 1) {
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.wood);
+            this.damping = .999;
+        }
+        else if (this.m_index == 2) {
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.plastic);
+            this.damping = .99;
+        }
+        else if (this.m_index == 3) {
+            this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.metal);
+            this.damping = .9999;
+        }
     }
 
     pendulum_update(dt, damping) {
@@ -337,7 +369,7 @@ export class GolfBallFantasy extends Scene {
             }
 
             if (this.is_Hit)
-                this.pendulum_update(dt, .895);
+                this.pendulum_update(dt, this.damping);
             else this.pendulum_update(dt, .99995);
         }
         if (this.current_golf_ball_position.times(vec4(0,0,0,1))[1] < 0) this.club_angle = 0;
@@ -638,9 +670,9 @@ export class GolfBallFantasy extends Scene {
     }
 
     set_immersed_acceleration(h) {
-       /*   buoyant force = water density * g * immersed volume
-            immersed volume of a sphere = pi(R*h^2 - h^3/3), where h is the immersed height
-        */
+        /*   buoyant force = water density * g * immersed volume
+             immersed volume of a sphere = pi(R*h^2 - h^3/3), where h is the immersed height
+         */
         // console.log(h);
         if (h >= 2) {h = 2;}
 
@@ -675,8 +707,8 @@ export class GolfBallFantasy extends Scene {
         const light_position = vec4(0, 5, 5, 1);
         // The parameters of the Light are: position, color, size
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000),
-                                // new Light(vec4(0, -5, 15, 1), color(1,1,1,1), 1000)
-                                ];
+            // new Light(vec4(0, -5, 15, 1), color(1,1,1,1), 1000)
+        ];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         const yellow = hex_color("#fac91a");
@@ -692,7 +724,7 @@ export class GolfBallFantasy extends Scene {
 
 
         this.swing_golf_club(dt);
-        this.draw_golf_clubs(context, program_state, this.club_angle);
+        this.draw_golf_clubs(context, program_state, this.club_angle, this.m_index);
 
         if (!this.is_Hit) {
             this.draw_golf_ball(context, program_state);
@@ -777,7 +809,6 @@ class Gouraud_Shader extends Shader {
         uniform float light_attenuation_factors[N_LIGHTS];
         uniform vec4 shape_color;
         uniform vec3 squared_scale, camera_center;
-
         // Specifier "varying" means a variable's final value will be passed from the vertex shader
         // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the
         // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
@@ -797,7 +828,6 @@ class Gouraud_Shader extends Shader {
                 vec3 surface_to_light_vector = light_positions_or_vectors[i].xyz - 
                                                light_positions_or_vectors[i].w * vertex_worldspace;                                             
                 float distance_to_light = length( surface_to_light_vector );
-
                 vec3 L = normalize( surface_to_light_vector );
                 vec3 H = normalize( L + E );
                 // Compute the diffuse and specular components from the Phong
@@ -901,56 +931,6 @@ class Gouraud_Shader extends Shader {
 
         this.send_material(context, gpu_addresses, material);
         this.send_gpu_state(context, gpu_addresses, gpu_state, model_transform);
-    }
-}
-
-class Texture_Rotate extends defs.Textured_Phong {
-    fragment_glsl_code() {
-        return this.shared_glsl_code() + `
-            varying vec2 f_tex_coord;
-            uniform sampler2D texture;
-            uniform float animation_time;
-            void main(){
-                // Sample the texture image in the correct place:
-                
-                // cube 1: 15rpm
-                // 15 * 2pi / 60 = 1/2 * pi rad/s = 1/2 * 3.1415926
-                
-                // rotation speed is .5
-                // mod 4. to complete one cycle
-                float angle = .5 * 3.1415926 * mod(animation_time, 4.);
-                mat4 rot_mat = mat4(
-                    vec4(cos(angle), -sin(angle), 0., 0.),
-                    vec4(sin(angle), cos(angle), 0., 0.),
-                    vec4(0., 0., 1., 0.),
-                    vec4(0., 0., 0., 1.)
-                );
-                
-                // rotate
-                // pad zero
-                vec4 f_tex_vec4 = vec4(f_tex_coord, 0., 0.);
-                f_tex_vec4 += vec4(-.5, -.5, 0., 0.);
-                f_tex_vec4 = rot_mat * f_tex_vec4;
-                f_tex_vec4 += vec4(.5, .5, 0., 0.);
-                
-                vec2 f_tex_coord = vec2(f_tex_vec4.x, f_tex_vec4.y);
-                vec4 tex_color = texture2D( texture, f_tex_coord );
-                
-                
-                float bx = mod(f_tex_coord.x, 1.);
-                float by = mod(f_tex_coord.y, 1.);
-                if ((bx >= 0.15 && bx <= 0.85 && by >= 0.15 && by <= 0.25)
-                    || (bx >= 0.15 && bx <= 0.85 && by >= 0.75 && by <= 0.85)
-                    || (bx >= 0.15 && bx <= 0.25 && by >= 0.15 && by <= 0.85)
-                    || (bx >= 0.75 && bx <= 0.85 && by >= 0.15 && by <= 0.85)
-                ) tex_color = vec4(0., 0., 0., 1.);
-                 
-                if ( tex_color.w < .01 ) discard;
-                                                                         // Compute an initial (ambient) color:
-                gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w ); 
-                                                                         // Compute the final color with contributions from lights:
-                gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
-        } `;
     }
 }
 
