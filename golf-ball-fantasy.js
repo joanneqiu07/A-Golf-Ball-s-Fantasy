@@ -90,6 +90,7 @@ export class GolfBallFantasy extends Scene {
         this.is_stopped = false;
         this.is_bounced = false;
         this.inHole = false;
+        this.scene2Cam = false;
 
         this.camera_on_ball = 0;
 
@@ -209,6 +210,7 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Change Golf Club's material", ['q'], this.set_materials);
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
         this.key_triggered_button("Camera on Ball", ['c'], () => this.camera_on_ball = (this.camera_on_ball+1)%3);
+        this.key_triggered_button("Scene 2", ['b'], () => this.scene2Cam = !this.scene2Cam);
     }
 
     /*  @para: v: float  (hopefully) the initial horizontal speed of the object
@@ -633,6 +635,8 @@ export class GolfBallFantasy extends Scene {
         draw_px(this.blue_px, hex_color("#2bd8ff"));
         draw_px(this.red_px, hex_color("#ff2727"));
         draw_px(this.yellow_px, hex_color("#ffd539"));
+        let desired = Mat4.translation(100, 15, -70);
+        program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
     }
 
 
@@ -848,6 +852,10 @@ export class GolfBallFantasy extends Scene {
         }
         else if(this.camera_on_ball === 2){
             let desired = Mat4.translation(-x, -y, -45);
+            program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
+        }
+        if (this.scene2Cam){
+            let desired = Mat4.translation(10, 20, -60);
             program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
         }
 
