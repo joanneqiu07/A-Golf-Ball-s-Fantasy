@@ -588,7 +588,7 @@ export class GolfBallFantasy extends Scene {
                     domino_upper_left_x = domino_upper_left[0], domino_upper_left_y = domino_upper_left[1],
                     domino_bottom_left_x = domino_bottom_left[0], domino_bottom_left_y = domino_bottom_left[1]
                 if (this.onLine(btn_top_right_x, btn_top_right_y,
-                    domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y, 1)) {
+                    domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y, 1.3)) {
                     // The domino collided with the button
                     this_domino.state = "collided";
                     console.log(btn_top_right_x, btn_top_right_y, domino_upper_left, domino_bottom_left);
