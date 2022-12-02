@@ -686,6 +686,8 @@ export class GolfBallFantasy extends Scene {
             this.golf_ball_acceleration = {x: 0, y: 0};
             // this.current_golf_ball_position = Mat4.translation(golf_ball_center_x, golf_ball_center_y, golf_ball_center_z);
             this.is_stopped = true;
+            // Drag the golf ball to the tank bottom
+            this.current_golf_ball_position = Mat4.translation(0,tank_bottom - golf_ball_bottom_y, 0).times(this.current_golf_ball_position);
         }
 
         // this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
