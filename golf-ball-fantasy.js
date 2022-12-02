@@ -1,6 +1,7 @@
 import {defs, tiny} from './examples/common.js';
 import {Text_Line} from "./examples/text-demo.js";
 
+
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture,
 } = tiny;
@@ -45,20 +46,29 @@ export class GolfBallFantasy extends Scene {
                 {ambient: .7, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
             flag: new Material(new defs.Phong_Shader(),
                 {ambient: .5, diffusivity: .7, specularity: 0, color: hex_color("#ffffff")}),
+            cloud: new Material(new Textured_Phong(1),
+                {ambient: 1, diffusivity: 0.9, specularity: 0,
+                    texture: new Texture("assets/cloud.jpg", "NEAREST")}),
+            grass: new Material(new Textured_Phong(1),
+                {ambient: 1, diffusivity: 0.9, specularity: 0,
+                    texture: new Texture("assets/grass.jpg", "NEAREST")}),
+            underground: new Material(new Textured_Phong(1),
+                {ambient: 1, diffusivity: 0.9, specularity: 0,
+                    texture: new Texture("assets/underground.png", "NEAREST")}),
             golf_head: new Material(new defs.Phong_Shader(),
                 {ambient: 1, diffusivity: .1, color: hex_color("9E9E9E")}),
-            // golf_stick: new Material(new defs.Textured_Phong(),
-            //     {ambient:1 , color: hex_color("808080")}),
+            celling: new Material(new defs.Phong_Shader(),
+                {ambient: 1, diffusivity: .1, color: hex_color("1B0000")}),
             golf_stick: new Material(new defs.Phong_Shader(),
                 {ambient:1 , color: hex_color("808080")}),
-            wood: new Material(new defs.Textured_Phong(1),
-                {ambient: 1, diffusitivity: .5, smoothness: 50, color:hex_color("000000"),
+            wood: new Material(new Textured_Phong(1),
+                {ambient: 1, smoothness: 50, color:hex_color("000000"),
                     texture: new Texture("assets/wood.jpeg", "NEAREST")}),
             plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
             metal: new Material(new Gouraud_Shader(),
-                {diffusivity: .2, specularity: 1, color: hex_color('#80FFFF')}),
-            gg: new Material(new defs.Textured_Phong(1), {
+                {ambient: .3, diffusivity: .2, specularity: 1, color: hex_color('#80FFFF')}),
+            gg: new Material(new Textured_Phong(1), {
                 color: hex_color("#000000"),
                 ambient: 1, diffusivity: 0.9, specularity: 0,
                 texture: new Texture("assets/ggCandara2.png", "NEAREST")
@@ -319,10 +329,10 @@ export class GolfBallFantasy extends Scene {
 
     draw_ground(context, program_state) {
         // The ground for scene 1
-        let ground1_transform = Mat4.translation(-20, -2, 0).times(Mat4.scale(30, 1, 1));
-        this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.test.override({color: this.ground_color}));
-        let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
-        this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.test.override({color: this.ground_color}));
+        let ground1_transform = Mat4.translation(-26, -2, 0).times(Mat4.scale(35, 1, 1));
+        this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.grass);
+        let ground2_transform = Mat4.translation(26,-2,0).times(Mat4.scale(13, 1, 1));
+        this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.grass);
         // console.log(ground1_transform.times(vec4(-1,1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
         //             ground1_transform.times(vec4(1,-1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
         //             ground2_transform.times(vec4(-1,1,1,1)), ground2_transform.times(vec4(1,1,1,1)));
@@ -382,22 +392,25 @@ export class GolfBallFantasy extends Scene {
             .times(Mat4.rotation(- angle, 0, 0, 1))
             .times(Mat4.translation(-.2, -10, 0))
             .times(Mat4.scale(.2, 10, .2));
-        this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
         this.golf_head_model = this.golf_club_model.times(Mat4.translation(0, -1, 4))
             .times(Mat4.scale(2, .1, 5.5));
         if (this.m_index === 0){
+            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
             this.damping = .9995;
         }
-        else if (this.m_index == 1) {
+        else if (this.m_index === 1) {
+            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.wood);
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.wood);
             this.damping = .999;
         }
-        else if (this.m_index == 2) {
+        else if (this.m_index === 2) {
+            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.plastic);
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.plastic);
             this.damping = .99;
         }
-        else if (this.m_index == 3) {
+        else if (this.m_index === 3) {
+            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.metal);
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.metal);
             this.damping = .9999;
         }
@@ -636,10 +649,10 @@ export class GolfBallFantasy extends Scene {
     }
 
 
-    draw_game_over(context, program_state, tank_center_loc = [0, -70, 0]) {
+    draw_game_over(context, program_state, tank_center_loc = [0, -73, 0]) {
         // The game over scene
-        let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(100,10,1));
-        let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+1);
+        let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(100,7,20));
+        let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+20);
         this.shapes.text.set_string("GAME OVER", context.context);
         // Modeling a falling golf ball
         let golf_ball_transform = Mat4.translation(tank_center_loc[0]-5, tank_center_loc[1]+20, tank_center_loc[2]);
@@ -762,6 +775,25 @@ export class GolfBallFantasy extends Scene {
         console.log(h, acc);
     }
 
+    draw_background(context, program_state) {
+        let background_transform = Mat4.identity();
+        let wall = background_transform.times(Mat4.translation(-10, 47,-20))
+            .times(Mat4.scale(60,50,.1));
+        this.shapes.cube.draw(context, program_state, wall, this.materials.cloud);
+        let floor1 = background_transform.times(Mat4.translation(-11.5, -3, -13))
+            .times(Mat4.scale(60,.1,12));
+        this.shapes.cube.draw(context, program_state, floor1, this.materials.grass);
+        let floor2 = background_transform.times(Mat4.translation(-11.5, -3, 15))
+            .times(Mat4.scale(60,.1,14));
+        this.shapes.cube.draw(context, program_state, floor2, this.materials.grass);
+        let underground = background_transform.times(Mat4.translation(-2, -42,-20))
+            .times(Mat4.scale(100,38,.1));
+        this.shapes.cube.draw(context, program_state, underground, this.materials.underground);
+        let celling = background_transform.times(Mat4.translation(-8,-3.1,0))
+            .times(Mat4.scale(100,.1,30));
+        this.shapes.cube.draw(context,program_state,celling, this.materials.celling);
+    }
+
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
@@ -769,7 +801,7 @@ export class GolfBallFantasy extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
-            program_state.set_camera(Mat4.translation(10, -10, -60));
+            program_state.set_camera(Mat4.translation(10, -15, -60));
             // program_state.set_camera(Mat4.translation(0, 10, -100));
             // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
             // program_state.set_camera(Mat4.translation(55, 30, -28)); // focus on the dominoes
@@ -779,8 +811,6 @@ export class GolfBallFantasy extends Scene {
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, .1, 1000);
 
-        // this.shapes.[XXX].draw([XXX]) // <--example
-
         const light_position = vec4(0, 5, 5, 1);
         // The parameters of the Light are: position, color, size
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000),
@@ -789,14 +819,12 @@ export class GolfBallFantasy extends Scene {
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         const yellow = hex_color("#fac91a");
-        let model_transform = Mat4.identity();
-
-        // this.shapes.cube.draw(context, program_state, Mat4.translation(13,0,0), this.materials.test);
 
         let gravity = -0.5*9.8*t*t;
 
         // Draw the ground of scene 1
 
+        this.draw_background(context, program_state);
         const ground1_transform = this.draw_ground(context, program_state);
 
 
