@@ -133,6 +133,65 @@ export class GolfBallFantasy extends Scene {
 
         this.you_win = false;
 
+        // this.black_px = [[2,14],[2,15],[2,26],[2,27],[3,14],[3,15],[3,26],[3,27],
+        // [4,16],[4,17],[4,24],[4,25],[5,16],[5,17],[5,24],[5,25],[6,18],[6,19],[6,22],[6,23],
+        // [7,18],[7,19],[7,22],[7,23],[7,33],[7,34],[7,35],[7,36],[7,44],[7,45],[7,51],[7,52],
+        // ]
+        this.yellow_px = [[1,14],[1,15],[1,16],[1,17],[1,26],[1,27],[1,28],[1,29],
+        [2,14], [2,17], [2,26], [2,29], [3,14],[ 3,17], [3,18], [3,19], [3,24], [3,25], [3,26], [3,29],
+        [4, 14], [4,15], [4,16],[4,19],[4,24],[4,27],[4,28],[4,29],
+        [5,16], [5,19],[5,20],[5,23],[5,24],[5,27], [6,16], [6,17], [6,18],[6,21], [6,22],[6,25],[6,26],[6,27],
+        [7,18],[7,25],[8,18],[8,19],[8,20],[8,23],[8,24],[8,25],
+            [9,20],[9,23],[10,20],[10,23],[11,20],[11,23],[12,20],[12,23],
+            [13,20],[13,23],[14,20],[14,23],[15,20],[15,23],[16,20],[16,23],[17,20],[17,23],
+        [18,18],[18,19],[18,20],[18,23],[29,28],[29,29],[29,30], [29,31],
+        [30,28],[30,31],[31,28],[31,31],[32,28],[32,31],[33,28],[33,31],[34,28],[34,31],
+            [35,28],[35,31],[36,28],[36,31],[37,28],[37,31],[38,28],[38,31],[39,28],[39,31],
+            [40,28],[40,31],[41,28],[41,31],[42,28]];
+        this.red_px = [[5,44],[5,45],[5,46],[5,47],[5,51],[5,52],[5,53],[5,54],
+        [6,44],[6,47],[6,51],[6,54],[7,44],[7,47],[7,51],[7,54],[8,44],[8,47],[8,51],[8,54],
+            [9,44],[9,47],[9,51],[9,54],[10,44],[10,47],[10,51],[10,54],[11,44],[11,47],[11,51],[11,54],
+            [12,44],[12,47],[12,51],[12,54],[13,44],[13,47],[13,51],[13,54],[13,44],[13,47],[13,51],[13,54],
+            [14,44],[14,47],[14,51],[14,54],[15,44],[15,47],[15,51],[15,54],
+            [16,44],[16,47],[16,18], [16,49], [16,50], [16,51],[16,54], [17,45], [17,53], [17,54],
+            [18,40], [18,41],[18,40], [18,42],[18,43], [18,44],[18,45], [18,46],[18,47], [18,48],[18,49], [18,50],
+            [18,51],[18,52],[18,53], [19,1], [19,4], [19,14], [19,17], [20,1], [20,4], [20,14], [20,17],
+            [21,1], [21,4], [21,14], [21,17], [22,1], [22,4], [22,14], [22,17],
+            [23,1], [23,4], [23,14], [23,17], [23,28], [23,29], [23,30], [23,31],
+            [24,4], [24,14], [24,17], [24,28], [24,29], [24,30], [24,31],
+            [25,1], [25,4], [25,14], [25,17], [25,28], [25,29], [25,30], [25,31],
+            [26,1], [26,4], [26,14], [26,17], [26,28], [26,29], [26,30], [26,31],
+            [27,1], [27,4], [27,14], [27,17],[28,1], [28,4], [28,14], [28,17],
+            [29,1], [29,4], [29,14], [29,17],[30,1], [30,4], [30,14], [30,17],
+            [31,1], [31,4], [32,14], [32,17],[33,1], [33,4], [33,14], [33,17],
+            [34,1], [34,4], [34,14], [34,17],[35,1], [35,4], [35,14], [35,17],
+            [36,1], [36,4], [36,6], [36,7], [36,8], [36,9], [36,10], [36,11], [36,12], [36,14], [36,17],
+            [37,1], [37,4], [37,6],[37,12], [37,14],[37,17],[38,1], [38,4],[38,5], [38,13], [38,14],[38,17],
+            [39,1], [39,7], [39,8], [39,9], [39,10], [39,11],[39,17], [40,1], [40,7],[40,11],[40,17],
+            [41,1], [41,4], [41,5], [41,6], [41,7], [41,11], [41,12], [41,13],[41,14], [41,17],
+            [42,1], [42,4],[42,14],[42,17],
+            [43,1], [43,2],[43,3],[43,15],[43,15],[43,16],[43,17],[43,18],[43,19],[43,20],[43,21],
+            [43,22],[43,23],[43,24],[43,25],[43,26],[43,27],[43,28],[43,29],[43,30],[43,31],
+            [43,32],[43,33],[43,34],[43,35],[43,36],[43,37],[43,38],[43,39],[43,40],[43,41],
+            [43,42],[43,43],[43,44]
+        ];
+        this.blue_px = [[6,31],[6,32],[6,33],[6,34],[6,35],[6,36],[6,37],[6,38],[6,39],[6,40],
+            [7,31],[7,40],[8,31],[8,40],[9,31],[9,34],[9,35],[9,36],[9,37],[9,40],[10,31],[10,34],[10,37], [10,40],
+            [11,31],[11,34],[11,37],[11,40],[12,31],[12,34],[12,37],[12,40],[13,31],[13,34],[13,37],[13,40],
+            [14,31],[14,34],[14,37],[14,40],[15,31],[15,34],[15,37],[15,40],
+            [16,31],[16,34],[16,35],[16,36],[16,37],[16,40],[17,31],[17,40],
+            [18,24],[18,25],[18,26],[18,27],[18,28],[18,29],[18,30],[18,31],[18,32],[18,33],[18,34],[18,35],
+            [18,36],[18,37],[18,38],[18,39],
+            [29,42],[29,43],[29,44],[29,46],[29,47],[29,48],[29,49],[29,50],
+            [30,42],[30,44],[30,46],[30,51],[31,42],[31,45],[31,46],[31,51],[31,52],[31,53],
+            [32,42],[32,47],[32,48],[32,49],[32,50],[32,53],[33,42],[33,47],[33,50],[33,53],
+            [34,42],[34,45],[34,46],[34,47],[34,50],[34,53],[35,42],[35,45],[35,50],[35,53],
+            [36,42],[36,45],[36,50],[36,53],[37,42],[37,45],[37,50],[37,53],[38,42],[38,45],[38,50],[38,53],
+            [39,42],[39,45],[39,50],[39,53],[40,42],[40,45],[40,50],[40,53],
+            [41,32],[41,33],[41,34],[41,35],[41,36],[41,37],[41,38],[41,39],[41,40],[41,41],[41,42],[41,45],[41,50],[41,53],
+            [42,45],[42,50],[42,53]
+        ];
+
         // this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
         this.debug = true;
         // let debug = false;
@@ -409,7 +468,8 @@ export class GolfBallFantasy extends Scene {
             const initial_golf_ball_velocity = v;
             const golf_ball_mass = 0.046, domino_mass = 0.05;
             const domino_energy = 1/2*golf_ball_mass*(initial_golf_ball_velocity**2 - final_golf_ball_speed**2);
-            this.dominoes[0].angular_speed = Math.sqrt(6*domino_energy/domino_mass)/domino_height;
+            this.initial_angular_speed =  Math.sqrt(6*domino_energy/domino_mass)/domino_height;
+            this.dominoes[0].angular_speed = this.initial_angular_speed;
             console.log( this.dominoes[0].angular_speed);
         }
 
@@ -427,7 +487,7 @@ export class GolfBallFantasy extends Scene {
             // console.log(domino.transform.times(vec4(0,0,0,1)));
         }
 
-        if (this.dominoes[0].state === "sit still") {
+        if (this.dominoes[0].state == "sit still") {
             // Detect if the ball hits the first domino
             const golf_ball_center = this.current_golf_ball_position.times(vec4(0,0,0,1));
             const domino_right_x = this.dominoes[0].center.x + 0.5,
@@ -435,6 +495,7 @@ export class GolfBallFantasy extends Scene {
                 domino_bottom_y = this.dominoes[0].center.y - this.domino_dimension.y/2,
                 golf_ball_left_x = golf_ball_center[0]-1, golf_ball_left_y = golf_ball_center[1];
             if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y)) {
+                // TODO: change the collision detection to checking x-coor of the ball
                 // Let the first domino start to fall
                 this.dominoes[0].state = "fall";
                 set_initial_angular_speed();
@@ -486,7 +547,7 @@ export class GolfBallFantasy extends Scene {
                         next_domino.state = "fall"; /////////
                         this_domino.state = "collided"; ////////
                         // Set the angular speeds after collision
-                        next_domino.angular_speed = this_domino.angular_speed = this_domino.angular_speed / Math.sqrt(2);
+                        next_domino.angular_speed = this_domino.angular_speed =  this.initial_angular_speed;
                     }
                     else {  // The domino has not contacted with the next one
                         falling(this_domino);
@@ -540,7 +601,7 @@ export class GolfBallFantasy extends Scene {
                 this.you_win = true;
                 break;
         }
-        this.shapes.axis.draw(context, program_state, /*Mat4.translation(0,.5,0).times*/(button_transform), this.materials.test.override({color: hex_color("#ffff00")}));
+        // this.shapes.axis.draw(context, program_state, /*Mat4.translation(0,.5,0).times*/(button_transform), this.materials.test.override({color: hex_color("#ffff00")}));
         // button_transform = button_transform.times(Mat4.scale(1,.5,1));
         let button_base_transform = Mat4.translation(-74, -34-0.5, 0).times(Mat4.scale(1.2,0.5,1));
         if (this.debug) {
@@ -556,6 +617,22 @@ export class GolfBallFantasy extends Scene {
         // Draw the button and the button base
         this.shapes.pole_base.draw(context, program_state, button_transform, this.materials.test4.override({color: hex_color("#9370db")}));
         this.shapes.cube.draw(context, program_state, button_base_transform, this.materials.test4.override({color: hex_color("#b2b2b2")}));
+    }
+
+    draw_you_win(context, program_state, t) {
+        if (!this.you_win) {return;}
+        // if (t % 3 < 1) {return;}
+        const loc = [-140, 10];
+        const box_transform = Mat4.scale(0.5,0.5,0.5);
+        const draw_px = (arr, pxcolor) => {
+            arr.map((px) => {
+                const x = loc[0]+px[1], y = loc[1]-px[0];
+                this.shapes.cube.draw(context, program_state, Mat4.translation(x, y, 0).times(box_transform), this.materials.test4.override({color: pxcolor}));
+            });
+        }
+        draw_px(this.blue_px, hex_color("#2bd8ff"));
+        draw_px(this.red_px, hex_color("#ff2727"));
+        draw_px(this.yellow_px, hex_color("#ffd539"));
     }
 
 
@@ -778,6 +855,8 @@ export class GolfBallFantasy extends Scene {
         this.draw_game_over(context, program_state);
 
         this.draw_dominoes(context, program_state, dt);
+        // this.you_win = true;//////////
+        this.draw_you_win(context, program_state, t);
 
     }
 }
