@@ -55,10 +55,10 @@ export class GolfBallFantasy extends Scene {
             underground: new Material(new Textured_Phong(1),
                 {ambient: 1, diffusivity: 0.9, specularity: 0,
                     texture: new Texture("assets/underground.png", "NEAREST")}),
-            golf_head: new Material(new defs.Phong_Shader(),
-                {ambient: 1, diffusivity: .1, color: hex_color("9E9E9E")}),
             celling: new Material(new defs.Phong_Shader(),
                 {ambient: 1, diffusivity: .1, color: hex_color("1B0000")}),
+            golf_head: new Material(new defs.Phong_Shader(),
+                {ambient: 1, diffusivity: .1, color: hex_color("9E9E9E")}),
             golf_stick: new Material(new defs.Phong_Shader(),
                 {ambient:1 , color: hex_color("808080")}),
             wood: new Material(new Textured_Phong(1),
@@ -148,18 +148,18 @@ export class GolfBallFantasy extends Scene {
         // [7,18],[7,19],[7,22],[7,23],[7,33],[7,34],[7,35],[7,36],[7,44],[7,45],[7,51],[7,52],
         // ]
         this.yellow_px = [[1,14],[1,15],[1,16],[1,17],[1,26],[1,27],[1,28],[1,29],
-        [2,14], [2,17], [2,26], [2,29], [3,14],[ 3,17], [3,18], [3,19], [3,24], [3,25], [3,26], [3,29],
-        [4, 14], [4,15], [4,16],[4,19],[4,24],[4,27],[4,28],[4,29],
-        [5,16], [5,19],[5,20],[5,23],[5,24],[5,27], [6,16], [6,17], [6,18],[6,21], [6,22],[6,25],[6,26],[6,27],
-        [7,18],[7,25],[8,18],[8,19],[8,20],[8,23],[8,24],[8,25],
+            [2,14], [2,17], [2,26], [2,29], [3,14],[ 3,17], [3,18], [3,19], [3,24], [3,25], [3,26], [3,29],
+            [4, 14], [4,15], [4,16],[4,19],[4,24],[4,27],[4,28],[4,29],
+            [5,16], [5,19],[5,20],[5,23],[5,24],[5,27], [6,16], [6,17], [6,18],[6,21], [6,22],[6,25],[6,26],[6,27],
+            [7,18],[7,25],[8,18],[8,19],[8,20],[8,23],[8,24],[8,25],
             [9,20],[9,23],[10,20],[10,23],[11,20],[11,23],[12,20],[12,23],
             [13,20],[13,23],[14,20],[14,23],[15,20],[15,23],[16,20],[16,23],[17,20],[17,23],
-        [18,18],[18,19],[18,20],[18,23],[29,28],[29,29],[29,30], [29,31],
-        [30,28],[30,31],[31,28],[31,31],[32,28],[32,31],[33,28],[33,31],[34,28],[34,31],
+            [18,18],[18,19],[18,20],[18,23],[29,28],[29,29],[29,30], [29,31],
+            [30,28],[30,31],[31,28],[31,31],[32,28],[32,31],[33,28],[33,31],[34,28],[34,31],
             [35,28],[35,31],[36,28],[36,31],[37,28],[37,31],[38,28],[38,31],[39,28],[39,31],
             [40,28],[40,31],[41,28],[41,31],[42,28]];
         this.red_px = [[5,44],[5,45],[5,46],[5,47],[5,51],[5,52],[5,53],[5,54],
-        [6,44],[6,47],[6,51],[6,54],[7,44],[7,47],[7,51],[7,54],[8,44],[8,47],[8,51],[8,54],
+            [6,44],[6,47],[6,51],[6,54],[7,44],[7,47],[7,51],[7,54],[8,44],[8,47],[8,51],[8,54],
             [9,44],[9,47],[9,51],[9,54],[10,44],[10,47],[10,51],[10,54],[11,44],[11,47],[11,51],[11,54],
             [12,44],[12,47],[12,51],[12,54],[13,44],[13,47],[13,51],[13,54],[13,44],[13,47],[13,51],[13,54],
             [14,44],[14,47],[14,51],[14,54],[15,44],[15,47],[15,51],[15,54],
@@ -818,7 +818,6 @@ export class GolfBallFantasy extends Scene {
         ];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
-        const yellow = hex_color("#fac91a");
 
         let gravity = -0.5*9.8*t*t;
 
@@ -839,15 +838,6 @@ export class GolfBallFantasy extends Scene {
             this.draw_golf_ball_moving(context,
                 program_state, t-this.hit_time+2.5, ground1_transform, dt, this.swing_angle);
         }
-
-
-        //this.draw_golf_ball(context, program_state);
-        // if (t < 2.5) {
-        //     this.draw_golf_ball(context, program_state);
-        // }
-        // else if(t < 13){
-        //     this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
-        // }
 
 
         this.draw_pole(context,program_state);
