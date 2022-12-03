@@ -393,8 +393,6 @@ export class GolfBallFantasy extends Scene {
             this.inHole = true;
         }
         else if(this.golf_ball_velocity.x >= 16){
-            console.log("y_distance", platform_transform[1].times(vec4(0,0,0,1))[0]);
-            console.log("x_distance", this.golf_ball_position.times(vec4(0,0,0,1))[1]);
             let x_golf_ball = golf_ball_transform.times(vec4(0,0,0,1))[0]
             let y_golf_ball = this.golf_ball_position.times(vec4(0,0,0,1))[1];
             let x_platform2 = platform_transform[1].times(vec4(0,0,0,1))[0];
@@ -546,7 +544,6 @@ export class GolfBallFantasy extends Scene {
                 this.dominoes[0].state = "fall";
                 set_initial_angular_speed();
                 // Let the golf ball bounce back a little
-                console.log(1111);
                 this.golf_ball_velocity = {x: final_golf_ball_speed, y: 0};
                 this.golf_ball_acceleration = {x: -1, y: 0};
                 this.is_bounced = true;
@@ -560,17 +557,6 @@ export class GolfBallFantasy extends Scene {
             this.golf_ball_velocity = {x: 0, y: 0};
             this.is_stopped = true;
         }
-
-        // //////////// Let the domino fall at start for now
-        // if (this.dominoes[0].state === "sit still")
-        // {
-        //     this.dominoes[0].state = "fall";
-        //     set_initial_angular_speed(3);
-        // }
-        // // console.log(3/(this.domino_dimension.y)*Math.sqrt(3*golf_ball_mass*golf_ball_speed/domino_mass));
-        // // console.log(this.dominoes[0].angular_speed );
-        // // console.log(this.dominoes[0].transform.times(vec4(0,0,0,1)));
-        // ////////////
 
         // Control the motion of the dominoes from left to right
         // for (let i = this.dominoes.length - 2; i >= 0; i--) { // Control the ith domino
@@ -641,7 +627,6 @@ export class GolfBallFantasy extends Scene {
                     console.log("onLine");
                 }
                 else {  // The domino falls
-                    // console.log("fall");
                     falling(this_domino);
                 }
                 break;
@@ -782,13 +767,6 @@ export class GolfBallFantasy extends Scene {
             plane_transforms.push(plane_transform);
             this.shapes.cube.draw(context, program_state, plane_transform, this.materials.test);
         })
-        // const golf_ball_pos = this.golf_ball2_transform.times(vec4(0,0,0,1));
-        // const golf_ball_y = golf_ball_pos[1];
-        // if (this.hit_plane_count === 0 && golf_ball_y <= -8) { // Time to hit plane 1
-        //     this.hit_plane1();
-        //     this.hit_plane_count += 1;
-        //     console.log(golf_ball_pos);
-        // }
 
         if (this.hit_plane_count < 6)
         {
@@ -823,7 +801,6 @@ export class GolfBallFantasy extends Scene {
         /*   buoyant force = water density * g * immersed volume
              immersed volume of a sphere = pi(R*h^2 - h^3/3), where h is the immersed height
          */
-        // console.log(h);
         if (h >= 2) {h = 2;}
 
         const g = 9.8, water_density = 2000, radius = 0.024, mass = 0.046;  // The actual water density is 997 kg/m^3 but for the let's choose a denser water
