@@ -675,13 +675,13 @@ export class GolfBallFantasy extends Scene {
         const draw_px = (arr, pxcolor) => {
             arr.map((px) => {
                 const x = loc[0]+px[1], y = loc[1]-px[0];
-                this.shapes.cube.draw(context, program_state, Mat4.translation(x, y, 0).times(box_transform), this.materials.test4.override({color: pxcolor}));
+                this.shapes.cube.draw(context, program_state, Mat4.translation(x, y-10, 0).times(box_transform), this.materials.test4.override({color: pxcolor}));
             });
         }
         draw_px(this.blue_px, hex_color("#2bd8ff"));
         draw_px(this.red_px, hex_color("#ff2727"));
         draw_px(this.yellow_px, hex_color("#ffd539"));
-        let desired = Mat4.translation(100, 15, -70);
+        let desired = Mat4.translation(100, 20, -70);
         program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
     }
 
