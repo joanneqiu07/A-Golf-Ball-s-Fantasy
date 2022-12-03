@@ -1,7 +1,6 @@
 import {defs, tiny} from './examples/common.js';
 import {Text_Line} from "./examples/text-demo.js";
 
-
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture,
 } = tiny;
@@ -61,14 +60,14 @@ export class GolfBallFantasy extends Scene {
                 {ambient: 1, diffusivity: .1, color: hex_color("9E9E9E")}),
             golf_stick: new Material(new defs.Phong_Shader(),
                 {ambient:1 , color: hex_color("808080")}),
-            wood: new Material(new Textured_Phong(1),
-                {ambient: 1, smoothness: 50, color:hex_color("000000"),
+            wood: new Material(new defs.Textured_Phong(1),
+                {ambient: 1, diffusitivity: .5, smoothness: 50, color:hex_color("000000"),
                     texture: new Texture("assets/wood.jpeg", "NEAREST")}),
             plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
             metal: new Material(new Gouraud_Shader(),
-                {ambient: .3, diffusivity: .2, specularity: 1, color: hex_color('#80FFFF')}),
-            gg: new Material(new Textured_Phong(1), {
+                {diffusivity: .2, specularity: 1, color: hex_color('#80FFFF')}),
+            gg: new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#000000"),
                 ambient: 1, diffusivity: 0.9, specularity: 0,
                 texture: new Texture("assets/ggCandara2.png", "NEAREST")
@@ -100,6 +99,11 @@ export class GolfBallFantasy extends Scene {
         this.is_stopped = false;
         this.is_bounced = false;
         this.inHole = false;
+        this.scene2Cam = false;
+        this.splash = false;
+        this.splashx = 0;
+        this.splashy = 0;
+        this.initial_splash = 0;
 
         this.scene2Cam = false;
         this.splash = false;
@@ -213,6 +217,25 @@ export class GolfBallFantasy extends Scene {
         // let debug = false;
     }
 
+    draw_background(context, program_state) {
+        let background_transform = Mat4.identity();
+        let wall = background_transform.times(Mat4.translation(-10, 47,-20))
+            .times(Mat4.scale(60,50,.1));
+        this.shapes.cube.draw(context, program_state, wall, this.materials.cloud);
+        let floor1 = background_transform.times(Mat4.translation(-11.5, -3, -13))
+            .times(Mat4.scale(60,.1,12));
+        this.shapes.cube.draw(context, program_state, floor1, this.materials.grass);
+        let floor2 = background_transform.times(Mat4.translation(-11.5, -3, 15))
+            .times(Mat4.scale(60,.1,14));
+        this.shapes.cube.draw(context, program_state, floor2, this.materials.grass);
+        let underground = background_transform.times(Mat4.translation(-2, -42,-20))
+            .times(Mat4.scale(100,38,.1));
+        this.shapes.cube.draw(context, program_state, underground, this.materials.underground);
+        let celling = background_transform.times(Mat4.translation(-8,-3.1,0))
+            .times(Mat4.scale(100,.1,30));
+        this.shapes.cube.draw(context,program_state,celling, this.materials.celling);
+    }
+
     set_materials() {
         this.m_index += 1;
         this.m_index %= 4;
@@ -225,6 +248,7 @@ export class GolfBallFantasy extends Scene {
         this.key_triggered_button("Change Golf Club's material", ['q'], this.set_materials);
         this.key_triggered_button("Speed up", ['g'], () => this.speedUp());
         this.key_triggered_button("Camera on Ball", ['c'], () => this.camera_on_ball = (this.camera_on_ball+1)%3);
+        this.key_triggered_button("Scene 2", ['b'], () => this.scene2Cam = !this.scene2Cam);
     }
 
     /*  @para: v: float  (hopefully) the initial horizontal speed of the object
@@ -257,11 +281,6 @@ export class GolfBallFantasy extends Scene {
         return y_distance;
     }
 
-    stay_on_ground(transform){
-        transform[1] = transform.times(vec4(0,-1,0,1))[1];
-        return transform;
-    }
-
     // The displacement of the golf ball in time dt, update this.golf_ball_velocity
     // para: dt
     // read this.golf_ball_velocity, this.golf_ball_acceleration; write to this.golf_ball_velocity
@@ -287,7 +306,13 @@ export class GolfBallFantasy extends Scene {
         // console.log(x, y, x1, y1, x2, y2, isOnLine);
         return isOnLine;
     }
-
+    onLine2(x, y, x1, y1, x2, y2, error = 0.8) {
+        // const error = 0.8;
+        const slope_diff = (y-y1)*(x2-x1) - (y2-y1)*(x-x1);
+        const isOnLine = Math.abs(slope_diff) <= error;
+        // console.log(x, y, x1, y1, x2, y2, isOnLine);
+        return isOnLine;
+    }
     /*
     Determine if the golf ball is on a plane in scene 2
     It is on the plane if (the golf ball center's y-coor - r) is on the plane
@@ -337,12 +362,12 @@ export class GolfBallFantasy extends Scene {
         // The ground for scene 1
         let ground1_transform = Mat4.translation(-26, -2, 0).times(Mat4.scale(35, 1, 1));
         this.shapes.cube.draw(context, program_state, ground1_transform, this.materials.grass);
-        let ground2_transform = Mat4.translation(26,-2,0).times(Mat4.scale(13, 1, 1));
+        let ground2_transform = Mat4.translation(20,-2,0).times(Mat4.scale(7, 1, 1));
         this.shapes.cube.draw(context, program_state, ground2_transform, this.materials.grass);
         // console.log(ground1_transform.times(vec4(-1,1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
         //             ground1_transform.times(vec4(1,-1,1,1)), ground1_transform.times(vec4(1,1,1,1)),
         //             ground2_transform.times(vec4(-1,1,1,1)), ground2_transform.times(vec4(1,1,1,1)));
-        return ground1_transform;
+        return [ground1_transform, ground2_transform];
     }
 
     draw_golf_ball(context, program_state){
@@ -352,12 +377,10 @@ export class GolfBallFantasy extends Scene {
 
     draw_golf_ball_moving(context, program_state, t, platform_transform, dt, swing_angle) {
         // Our lil moving Golf Ball
-        let golf_color = hex_color("#ffffff");
-        let golf_velocity = 38 * swing_angle;
         if (this.hit_plane_count === 0)
             this.golf_ball_velocity.x = 38 * swing_angle;
         let golf_ball_transform = Mat4.identity();
-        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), 0, 0)).times(Mat4.rotation(t, 1, -1, 0));
+        golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*this.golf_ball_velocity.x-(2.5*this.golf_ball_velocity.x), 0, 0)).times(Mat4.rotation(t, 1, -1, 0));
         // const {dx, dy} = this.delta_displacement(dt);
         // this.current_golf_ball_position = Mat4.translation(dx, dy, 0).times(this.current_golf_ball_position).times(Mat4.rotation(dt, -1, -1, 0));
         // Let the ball fall
@@ -365,14 +388,24 @@ export class GolfBallFantasy extends Scene {
             this.golf_ball_acceleration.y = -9.8;
         }
         // Prevent passing through the second plane
-        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0]+1 >= 13 && this.current_golf_ball_position.times(vec4(0,0,0,1))[1]-1 < -1 && this.hit_plane_count === 0 && golf_velocity < 16) {
+        if (this.current_golf_ball_position.times(vec4(0,0,0,1))[0]+1 >= 13 && this.current_golf_ball_position.times(vec4(0,0,0,1))[1]-1 < -1 && this.hit_plane_count === 0 && this.golf_ball_velocity.x < 16) {
             this.golf_ball_velocity.x = 0;
             this.inHole = true;
         }
-        if (this.y_distance(platform_transform, golf_ball_transform) > 0 || this.x_distance(platform_transform, golf_ball_transform) >= 0){
+        else if(this.golf_ball_velocity.x >= 16){
+            console.log("y_distance", platform_transform[1].times(vec4(0,0,0,1))[0]);
+            console.log("x_distance", this.golf_ball_position.times(vec4(0,0,0,1))[1]);
+            let x_golf_ball = golf_ball_transform.times(vec4(0,0,0,1))[0]
+            let y_golf_ball = this.golf_ball_position.times(vec4(0,0,0,1))[1];
+            let x_platform2 = platform_transform[1].times(vec4(0,0,0,1))[0];
+            if(x_golf_ball > 15 && x_golf_ball < x_platform2+7 && this.golf_ball_velocity.x >= 16){
+                this.current_golf_ball_position = this.golf_ball_position.times(Mat4.translation(t*this.golf_ball_velocity.x-(2.5*this.golf_ball_velocity.x), 0, 0));
+            }
+        }
+        if (this.y_distance(platform_transform[0], golf_ball_transform) > 0 || this.x_distance(platform_transform[0], golf_ball_transform) >= 0){
             let delta_t = t-this.initial_fall;
             let gravity = -0.5*9.8*delta_t*delta_t;
-            golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*golf_velocity-(2.5*golf_velocity), gravity, 0));
+            golf_ball_transform = this.golf_ball_position.times(Mat4.translation(t*this.golf_ball_velocity.x-(2.5*this.golf_ball_velocity.x), gravity, 0));
             if(this.inHole)
                 this.draw_scene2(context, program_state, dt);
             if (!this.is_stopped) {
@@ -382,13 +415,11 @@ export class GolfBallFantasy extends Scene {
         }
         else{
             this.initial_fall = t;
-            this.current_golf_ball_position = golf_ball_transform;
         }
         // console.log(this.y_distance(platform_transform, golf_ball_transform));
         // this.shapes.sphere.draw(context, program_state, golf_ball_transform, this.materials.golf_ball);
         this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
         //console.log(golf_ball_transform);
-        return golf_ball_transform;
     }
 
     draw_golf_clubs(context, program_state, angle, materials) {
@@ -398,27 +429,24 @@ export class GolfBallFantasy extends Scene {
             .times(Mat4.rotation(- angle, 0, 0, 1))
             .times(Mat4.translation(-.2, -10, 0))
             .times(Mat4.scale(.2, 10, .2));
+        this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
         this.golf_head_model = this.golf_club_model.times(Mat4.translation(0, -1, 4))
             .times(Mat4.scale(2, .1, 5.5));
         if (this.m_index === 0){
-            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.golf_stick);
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.golf_head);
-            this.damping = .9995;
+            this.damping = .8995;
         }
-        else if (this.m_index === 1) {
-            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.wood);
+        else if (this.m_index == 1) {
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.wood);
-            this.damping = .999;
+            this.damping = .899;
         }
-        else if (this.m_index === 2) {
-            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.plastic);
+        else if (this.m_index == 2) {
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.plastic);
-            this.damping = .99;
+            this.damping = .89;
         }
-        else if (this.m_index === 3) {
-            this.shapes.cube.draw(context, program_state, this.golf_club_model, this.materials.metal);
+        else if (this.m_index == 3) {
             this.shapes.sphere.draw(context, program_state, this.golf_head_model, this.materials.metal);
-            this.damping = .9999;
+            this.damping = .8999;
         }
     }
 
@@ -458,8 +486,7 @@ export class GolfBallFantasy extends Scene {
         let flag_color = hex_color("#FF0000");
         let flag_transform = Mat4.identity();
         flag_transform=flag_transform.times(Mat4.translation(9.5,20.25,0)).times(Mat4.scale(5,3.75,.35)).times(Mat4.rotation(3*Math.PI/2,0,1,0));
-        this.shapes.flag.draw(context,program_state,flag_transform,this.materials.flag.override({color: flag_color}));
-
+        this.shapes.flag.draw(context,program_state,flag_transform,this.materials.flag.override({color: flag_color}))
     }
 
     draw_pole(context,program_state){
@@ -604,8 +631,10 @@ export class GolfBallFantasy extends Scene {
                     btn_top_right_y = btn_center[1] + 0.5,
                     domino_upper_left_x = domino_upper_left[0], domino_upper_left_y = domino_upper_left[1],
                     domino_bottom_left_x = domino_bottom_left[0], domino_bottom_left_y = domino_bottom_left[1]
-                if (this.onLine(btn_top_right_x, btn_top_right_y,
-                    domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y)) {
+                // if (this.onLine(btn_top_right_x, btn_top_right_y,
+                //     domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y, 1.3)) {
+                if (this.onLine2(btn_top_right_x, btn_top_right_y,
+                    domino_upper_left_x, domino_upper_left_y, domino_bottom_left_x, domino_bottom_left_y, 1.3)) {
                     // The domino collided with the button
                     this_domino.state = "collided";
                     console.log(btn_top_right_x, btn_top_right_y, domino_upper_left, domino_bottom_left);
@@ -652,6 +681,8 @@ export class GolfBallFantasy extends Scene {
         draw_px(this.blue_px, hex_color("#2bd8ff"));
         draw_px(this.red_px, hex_color("#ff2727"));
         draw_px(this.yellow_px, hex_color("#ffd539"));
+        let desired = Mat4.translation(100, 15, -70);
+        program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
     }
 
     draw_splash(context, program_state, t){
@@ -678,8 +709,8 @@ export class GolfBallFantasy extends Scene {
 
     draw_game_over(context, program_state, t, tank_center_loc = [0, -70, 0]) {
         // The game over scene
-        let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(100,7,20));
-        let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+20);
+        let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(250,10,1));
+        let gg_transform = Mat4.translation(this.current_golf_ball_position.times(vec4(0, 0, 0, 1))[0], tank_center_loc[1], tank_center_loc[2]+1);
         this.shapes.text.set_string("GAME OVER", context.context);
         // Modeling a falling golf ball
         let golf_ball_transform = Mat4.translation(tank_center_loc[0]-5, tank_center_loc[1]+20, tank_center_loc[2]);
@@ -715,6 +746,8 @@ export class GolfBallFantasy extends Scene {
             this.golf_ball_acceleration = {x: 0, y: 0};
             // this.current_golf_ball_position = Mat4.translation(golf_ball_center_x, golf_ball_center_y, golf_ball_center_z);
             this.is_stopped = true;
+            // Drag the golf ball to the tank bottom
+            this.current_golf_ball_position = Mat4.translation(0,tank_bottom - golf_ball_bottom_y, 0).times(this.current_golf_ball_position);
         }
 
         // this.shapes.cube.draw(context, program_state, cube2_transform, this.materials.test.override({color: hex_color("#ffffff")}));
@@ -772,7 +805,7 @@ export class GolfBallFantasy extends Scene {
         // this.shapes.sphere.draw(context, program_state, this.current_golf_ball_position, this.materials.golf_ball);
 
         // Draw the platform
-        const ground_transform = Mat4.translation(-32, -36, 0).times(Mat4.scale(8, 1, 1));
+        const ground_transform = Mat4.translation(-52, -36, 0).times(Mat4.scale(28, 1, 1));
         this.shapes.cube.draw(context, program_state, ground_transform, this.materials.test.override({color: this.ground_color}));
 
         // Checking landing on the platform
@@ -803,25 +836,6 @@ export class GolfBallFantasy extends Scene {
         console.log(h, acc);
     }
 
-    draw_background(context, program_state) {
-        let background_transform = Mat4.identity();
-        let wall = background_transform.times(Mat4.translation(-10, 47,-20))
-            .times(Mat4.scale(60,50,.1));
-        this.shapes.cube.draw(context, program_state, wall, this.materials.cloud);
-        let floor1 = background_transform.times(Mat4.translation(-11.5, -3, -13))
-            .times(Mat4.scale(60,.1,12));
-        this.shapes.cube.draw(context, program_state, floor1, this.materials.grass);
-        let floor2 = background_transform.times(Mat4.translation(-11.5, -3, 15))
-            .times(Mat4.scale(60,.1,14));
-        this.shapes.cube.draw(context, program_state, floor2, this.materials.grass);
-        let underground = background_transform.times(Mat4.translation(-2, -42,-20))
-            .times(Mat4.scale(100,38,.1));
-        this.shapes.cube.draw(context, program_state, underground, this.materials.underground);
-        let celling = background_transform.times(Mat4.translation(-8,-3.1,0))
-            .times(Mat4.scale(100,.1,30));
-        this.shapes.cube.draw(context,program_state,celling, this.materials.celling);
-    }
-
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
@@ -829,7 +843,7 @@ export class GolfBallFantasy extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
             // program_state.set_camera(this.initial_camera_location);
-            program_state.set_camera(Mat4.translation(10, -15, -60));
+            program_state.set_camera(Mat4.translation(10, -10, -60));
             // program_state.set_camera(Mat4.translation(0, 10, -100));
             // program_state.set_camera(Mat4.translation(10, 40, -100)); // focus on the game over scene
             // program_state.set_camera(Mat4.translation(55, 30, -28)); // focus on the dominoes
@@ -839,6 +853,8 @@ export class GolfBallFantasy extends Scene {
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, .1, 1000);
 
+        // this.shapes.[XXX].draw([XXX]) // <--example
+
         const light_position = vec4(0, 5, 5, 1);
         // The parameters of the Light are: position, color, size
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000),
@@ -846,14 +862,17 @@ export class GolfBallFantasy extends Scene {
         ];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+        const yellow = hex_color("#fac91a");
+        let model_transform = Mat4.identity();
+
+        // this.shapes.cube.draw(context, program_state, Mat4.translation(13,0,0), this.materials.test);
 
         let gravity = -0.5*9.8*t*t;
 
         // Draw the ground of scene 1
 
+        const ground_transform = this.draw_ground(context, program_state);
         this.draw_background(context, program_state);
-        const ground1_transform = this.draw_ground(context, program_state);
-
 
         this.swing_golf_club(dt);
         this.draw_golf_clubs(context, program_state, this.club_angle, this.m_index);
@@ -864,8 +883,17 @@ export class GolfBallFantasy extends Scene {
         }
         else {
             this.draw_golf_ball_moving(context,
-                program_state, t-this.hit_time+2.5, ground1_transform, dt, this.swing_angle);
+                program_state, t-this.hit_time+2.5, ground_transform, dt, this.swing_angle);
         }
+
+
+        //this.draw_golf_ball(context, program_state);
+        // if (t < 2.5) {
+        //     this.draw_golf_ball(context, program_state);
+        // }
+        // else if(t < 13){
+        //     this.current_golf_ball_position = this.draw_golf_ball_moving(context, program_state, t, ground1_transform);
+        // }
 
 
         this.draw_pole(context,program_state);
@@ -894,6 +922,10 @@ export class GolfBallFantasy extends Scene {
         }
         else if(this.camera_on_ball === 2){
             let desired = Mat4.translation(-x, -y-6, -45);
+            program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
+        }
+        if (this.scene2Cam){
+            let desired = Mat4.translation(10, 20, -60);
             program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
         }
 
