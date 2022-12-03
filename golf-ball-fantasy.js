@@ -506,7 +506,7 @@ export class GolfBallFantasy extends Scene {
                 domino_top_y = this.dominoes[0].center.y + this.domino_dimension.y/2,
                 domino_bottom_y = this.dominoes[0].center.y - this.domino_dimension.y/2,
                 golf_ball_left_x = golf_ball_center[0]-1, golf_ball_left_y = golf_ball_center[1];
-            if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y)) {
+            if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y, 1)) {
                 // TODO: change the collision detection to checking x-coor of the ball
                 // Let the first domino start to fall
                 this.dominoes[0].state = "fall";
