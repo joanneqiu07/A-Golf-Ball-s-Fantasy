@@ -100,6 +100,14 @@ export class GolfBallFantasy extends Scene {
         this.is_stopped = false;
         this.is_bounced = false;
         this.inHole = false;
+// <<<<<<< HEAD
+// =======
+        this.scene2Cam = false;
+        this.splash = false;
+        this.splashx = 0;
+        this.splashy = 0;
+        this.initial_splash = 0;
+// >>>>>>> origin
 
         this.camera_on_ball = 0;
 
@@ -507,7 +515,7 @@ export class GolfBallFantasy extends Scene {
                 domino_top_y = this.dominoes[0].center.y + this.domino_dimension.y/2,
                 domino_bottom_y = this.dominoes[0].center.y - this.domino_dimension.y/2,
                 golf_ball_left_x = golf_ball_center[0]-1, golf_ball_left_y = golf_ball_center[1];
-            if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y)) {
+            if (this.onLine(golf_ball_left_x, golf_ball_left_y, domino_right_x, domino_top_y, domino_right_x, domino_bottom_y, 1)) {
                 // TODO: change the collision detection to checking x-coor of the ball
                 // Let the first domino start to fall
                 this.dominoes[0].state = "fall";
@@ -648,8 +656,33 @@ export class GolfBallFantasy extends Scene {
         draw_px(this.yellow_px, hex_color("#ffd539"));
     }
 
+    draw_splash(context, program_state, t){
+        if(!this.splash){
+            this.splash = true;
+            this.splashx = this.current_golf_ball_position.times(vec4(0, 0, 0, 1))[0];
+            this.splashy = this.current_golf_ball_position.times(vec4(0, 0, 0, 1))[1];
+            this.initial_splash = t;
+        }
+        else{
+            console.log("size", 0.7-t+this.initial_splash);
+            let splash_size = 0.7-t+this.initial_splash;
+            let reverse_splash_size = 0.7+t-this.initial_splash;
+            let splash1 = Mat4.translation(this.splashx-1, this.splashy+t-this.initial_splash-0.5, 0).times(Mat4.scale(splash_size+1, splash_size, 0.7));
+            let splash2 = Mat4.translation(this.splashx+1, this.splashy+t-this.initial_splash-0.5, 0).times(Mat4.scale(splash_size+1, splash_size, 0.7));
+            if(splash_size < -1.3){
+                splash1 = Mat4.translation(this.splashx-1, this.splashy+t-this.initial_splash-0.5, 0).times(Mat4.scale(0, 0, 0));
+                splash2 = Mat4.translation(this.splashx+1, this.splashy+t-this.initial_splash-0.5, 0).times(Mat4.scale(0, 0, 0));
+            }
+            this.shapes.sphere.draw(context, program_state, splash1, this.materials.test3.override({color: hex_color("#88ccff")}));
+            this.shapes.sphere.draw(context, program_state, splash2, this.materials.test3.override({color: hex_color("#88ccff")}));
+        }
+    }
 
-    draw_game_over(context, program_state, tank_center_loc = [0, -73, 0]) {
+// <<<<<<< HEAD
+//     draw_game_over(context, program_state, tank_center_loc = [0, -73, 0]) {
+// =======
+    draw_game_over(context, program_state, t, tank_center_loc = [0, -70, 0]) {
+// >>>>>>> origin
         // The game over scene
         let tank_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]).times(Mat4.scale(100,7,20));
         let gg_transform = Mat4.translation(tank_center_loc[0], tank_center_loc[1], tank_center_loc[2]+20);
@@ -674,7 +707,12 @@ export class GolfBallFantasy extends Scene {
         // is_show_text = true;
         if (is_show_text) {
             // this.shapes.text.draw(context, program_state, gg_transform, this.text_image);
-            let gg_plane_transform = Mat4.scale(15,10,0.005);
+// <<<<<<< HEAD
+//             let gg_plane_transform = Mat4.scale(15,10,0.005);
+// =======
+            this.draw_splash(context, program_state, t);
+            let gg_plane_transform = Mat4.scale(25,10,0.005);
+// >>>>>>> origin
             gg_plane_transform = gg_transform.times(gg_plane_transform);
             this.shapes.cube.draw(context, program_state, gg_plane_transform, this.materials.gg);
         }
@@ -865,12 +903,12 @@ export class GolfBallFantasy extends Scene {
             program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
         }
         else if(this.camera_on_ball === 2){
-            let desired = Mat4.translation(-x, -y, -45);
+            let desired = Mat4.translation(-x, -y-6, -45);
             program_state.set_camera(desired.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1)));
         }
 
         // Draw the game over scene
-        this.draw_game_over(context, program_state);
+        this.draw_game_over(context, program_state, t);
 
         this.draw_dominoes(context, program_state, dt);
         // this.you_win = true;//////////
