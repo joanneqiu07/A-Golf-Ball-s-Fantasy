@@ -693,7 +693,6 @@ export class GolfBallFantasy extends Scene {
             this.initial_splash = t;
         }
         else{
-            console.log("size", 0.7-t+this.initial_splash);
             let splash_size = 0.7-t+this.initial_splash;
             let reverse_splash_size = 0.7+t-this.initial_splash;
             let splash1 = Mat4.translation(this.splashx-1, this.splashy+t-this.initial_splash-0.5, 0).times(Mat4.scale(splash_size+1, splash_size, 0.7));
